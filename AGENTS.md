@@ -1,22 +1,25 @@
-# TaskDesk — Product Agent (v1)
+# TaskDesk - Product Agent (v1)
 
-Scopo
-Desktop app che sostituisce Excel per tracciare attività con riepiloghi chiari (Giorno/Settimana/Mese) e strumenti “smart” per chiudere il mese in modo credibile.
+## Visione prodotto
+TaskDesk e' un desktop tracker personale per ricostruire le attivita da inserire nel gestore commesse/attivita. Non e' uno strumento di fatturazione. Deve offrire viste Giorno/Settimana/Mese chiare, gap visibili e funzioni "smart" credibili per chiudere il mese senza inventare.
 
-Dati attività
-Data, Cliente (rubrica + autocomplete + recenti), Titolo, Descrizione, Riferimento Verbale, Risorsa ICON, Tempo (min). Flag: Caricato nel Gestore, Verbale fatto.
+## Policy qualita
+- UX premium: layout pulito, gerarchia chiara, contrasto corretto, hover/selected evidenti, accessibilita' WCAG base.
+- Dati affidabili: SQLite con migrazioni transazionali, backup prima delle migrazioni, niente perdita di dati silenziosa.
+- Prestazioni: liste virtualizzate quando crescono, query indicizzate, feedback immediato.
+- Stabilita dev: avvio dev predictibile, chiusura pulita, nessun crash all'exit.
+- Chiarezza: nomi coerenti, time tracking in minuti, timezone Europe/Rome.
 
-Viste & funzioni
-Giorno (quick-add, inline, tot/gap), Settimana (ISO-8601: tot/settimana, per giorno/cliente, gap), Mese (tot/giorni/cliente, progress/gap), Clienti (import CSV/mapping), Verbali (ricerca, stato, genera DOCX/PDF), Export (XLSX/CSV + “Daily Task ICON”), Backup WAL (auto + manuale).
+## Security Electron (obbligatorio)
+- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true` dove possibile.
+- Preload con API minime e whitelist IPC (no `ipcRenderer` generico esposto).
+- `webSecurity: true`, niente `allowRunningInsecureContent`.
+- Content Security Policy in `index.html`.
+- Nessun caricamento di contenuti remoti non necessari.
 
-Smart
-Smart Planner (what-if, distribuzione credibile), Smart Filler (10–25m coerenti), Smart Grouping (Cliente+Rif./Titolo), Suggeritore tempi (15/20/30/45), Advisor credibilità, Checklist chiusura, (opz) Budget cliente.
-
-UX/desktop
-Temi Light/Dark/System con contrasti corretti, Tray + Notifiche, Jump List/Taskbar (Win) con badge, Dock badge (mac), Global Hotkey Quick-Add, deep-links, Command Palette, Onboarding, Impostazioni (auto-avvio, portabile, hotkey, AI).
-
-AI (opzionale, OFF)
-Bridge provider (API/locale stub); key in OS Keychain; parser offline sempre presente; nessuna web-UI Plus.
-
-Tecnico
-Electron + Vite + React + Tailwind + SQLite; dev chiusura pulita; build EXE/Portable + DMG; auto-update predisposto su Releases; schema versionato, migrazioni transazionali, rollback.
+## Stile UI
+- Light/Dark/System con palette dedicate e contrasto verificabile.
+- Tipografia moderna e riconoscibile (no default system stack anonima).
+- Componenti con stati chiari: hover, active, focus, selected, disabled.
+- Layout denso ma leggibile: griglie, card, tabelle con righe alternate/hover.
+- Feedback visivo per gap, target e progressi (badge, progress bar, callout).

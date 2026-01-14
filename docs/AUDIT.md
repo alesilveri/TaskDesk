@@ -1,31 +1,30 @@
 # Audit repository
 
 ## Summary
-The workspace is mostly legacy/backups plus a compiled colleague app. There is no current active TaskDesk app at root yet. The main usable technical reference is `legacy/v3.1.1/taskdesk-v3.1.1` (Electron + Vite + React + SQLite). There are large build artifacts and `node_modules` that should not ship in the new repo.
+Repository pulito con un'app attiva in `apps/taskdesk` (Electron + Vite + React + Tailwind + SQLite) e un set minimo di riferimenti storici in `references/`. Gli artifact pesanti sono stati rimossi e ora sono ignorati da `.gitignore`.
 
 ## Inventory (high level)
-- Root files
-  - `.gitignore`
-  - `AGENTS.md`
-  - `PROMPT_TASKDESK_FULL.md`
-- `legacy/`
-  - `v3.1.1/taskdesk-v3.1.1/` (Electron app source + config; artifacts moved out)
-- `archive/`
-  - `TaskDesk_bck_old/` (backup copy of legacy app + compiled colleague app)
-  - `legacy-v3.1.1-artifacts/` (`node_modules`, `dist`, `dist-web`, `build`)
+- Root
+  - `AGENTS.md`, `CHANGELOG.md`, `README.md`, `PRIVACY.md`, `LICENSE`, `.gitignore`
+- `apps/taskdesk/`
+  - App principale (Electron + Vite + React + Tailwind + SQLite)
+- `assets/`
+  - Banner, icone e screenshot placeholder
+- `docs/`
+  - Audit, decisions, identity e prompt in `docs/prompts/`
 - `references/`
-  - `RegistroAttivita.zip` (colleague app, compiled)
+  - Legacy source e materiali di riferimento
+- `.github/`
+  - Issue/PR templates e workflow release
 
 ## Potentially useful items
-- `legacy/v3.1.1/taskdesk-v3.1.1/` source code (reference for Electron + SQLite patterns).
-- `TaskDesk_bck_old/docs/architecture.md` (clear architecture outline; can be distilled into decisions/notes).
-- `TaskDesk_bck_old/RegistroAttivita/CLIENTI/clienti.csv` (sample client list format; shows category hints like “CANONE OK / NO CANONE”).
+- `references/legacy-taskdesk-v3.1.1/` (vecchia base Electron/SQLite da consultare come riferimento).
+- `references/legacy-architecture.md` (architettura storica utile per decisioni tecniche).
+- `references/clients-sample.csv` (formato CSV clienti da usare per import/mapping).
+- `references/RegistroAttivita.zip` (app compilata collega; solo benchmark UX).
 
 ## Noise / artifacts
-- `archive/legacy-v3.1.1-artifacts/` (moved here to keep repo clean).
-- `archive/TaskDesk_bck_old/` (duplicate legacy app + `node_modules`, `dist`, `dist-web`).
-- `references/RegistroAttivita.zip` and `archive/TaskDesk_bck_old/RegistroAttivita/` (compiled binaries only).
+- Nessun artifact pesante tracciato (node_modules, dist, release e build sono ignorati).
 
 ## Notes
-- No current active `apps/taskdesk` scaffold exists yet.
-- Colleague app appears as a compiled .NET executable with CSV-based client data; no UI/source to reuse.
+- `apps/taskdesk` e' l'unica base attiva per l'MVP.

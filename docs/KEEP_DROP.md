@@ -1,15 +1,16 @@
 # Keep / Archive / Drop
 
 ## KEEP
-- `AGENTS.md` (project instructions)
-- `PROMPT_TASKDESK_FULL.md` (master prompt)
-- `.gitignore` (repo hygiene)
-- `legacy/v3.1.1/taskdesk-v3.1.1/` (code reference only; keep under `legacy/`)
+- `apps/taskdesk/` (app attiva)
+- `AGENTS.md` (guida unica)
+- `docs/` (audit, decisions, prompt)
+- `assets/` (branding)
+- `.github/` (workflow + template)
+- `references/` (solo reference utili e leggere)
+- `.gitignore`, `README.md`, `CHANGELOG.md`, `PRIVACY.md`, `LICENSE`
 
 ## ARCHIVE
-- `archive/TaskDesk_bck_old/` (backup copy of legacy app and compiled colleague app)
-- `archive/legacy-v3.1.1-artifacts/` (legacy `node_modules`, `dist`, `dist-web`, `build`)
-- `references/RegistroAttivita.zip` (external compiled colleague app)
+- None (repo gia' ripulita; mantenere solo reference minime).
 
 ## DROP
-- None for now (prefer move to `archive/` or `references/` to avoid data loss)
+- Artifact generati: `node_modules`, `dist*`, `build`, `release` (non versionati, sempre rigenerabili).
