@@ -1,12 +1,8 @@
 ## Summary
 
-## Changes
-- 
-
 ## Testing
-- [ ] npm run typecheck
-- [ ] npm run lint
-- [ ] npm run build
+- [ ] Not run (reason)
 - [ ] npm run smoke
+- [ ] npm run build
 
 ## Notes

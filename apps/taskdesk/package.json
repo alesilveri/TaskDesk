@@ -1,11 +1,12 @@
 {
   "name": "taskdesk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "main": "dist-electron/main.js",
   "author": "",
   "license": "MIT",
   "scripts": {
+    "preinstall": "node scripts/check-node.cjs",
     "dev": "node scripts/dev.cjs",
     "build:renderer": "vite build",
     "build:electron": "tsc -p electron/tsconfig.json",
@@ -15,6 +16,9 @@
     "smoke": "node scripts/smoke.cjs",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier . --write"
+  },
+  "engines": {
+    "node": ">=20 <23"
   },
   "dependencies": {
     "better-sqlite3": "^11.5.0",
@@ -73,11 +77,11 @@
     "asar": true,
     "win": {
       "target": ["nsis", "portable"],
-      "icon": "build/icon.png"
+      "icon": "build/icon.ico"
     },
     "mac": {
       "target": ["dmg"],
-      "icon": "build/icon.png"
+      "icon": "build/icon.icns"
     },
     "linux": {
       "target": ["AppImage"],

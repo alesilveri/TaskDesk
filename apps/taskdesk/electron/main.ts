@@ -19,8 +19,12 @@ import {
   getDurationPatterns,
   getSettings,
   setSettings,
+  listTemplates,
+  createTemplate,
+  deleteTemplate,
+  useTemplate,
 } from './db';
-import { exportMonthlyXlsx, exportMonthlyCsv } from './export';
+import { exportMonthlyXlsx, exportMonthlyCopy } from './export';
 import { createBackup, listBackups, restoreBackup } from './backup';
 import { inspectCsv, importClientsFromCsv } from './csv';
 
@@ -141,19 +145,6 @@ function sendToRenderer(channel: string, payload?: unknown) {
 function createAppMenu() {
   const template: Electron.MenuItemConstructorOptions[] = [
     {
-      label: 'TaskDesk',
-      submenu: [
-        { role: 'about' },
-        { type: 'separator' },
-        {
-          label: 'Impostazioni',
-          click: () => sendToRenderer('ui:navigate', 'settings'),
-        },
-        { type: 'separator' },
-        { role: 'quit' },
-      ],
-    },
-    {
       label: 'File',
       submenu: [
         {
@@ -162,12 +153,27 @@ function createAppMenu() {
           click: () => sendToRenderer('ui:quick-add'),
         },
         {
-          label: 'Export mese',
+          label: 'Importa clienti',
+          click: () => sendToRenderer('ui:navigate', 'clients'),
+        },
+        {
+          label: 'Esporta mese (XLSX)',
           accelerator: 'CommandOrControl+E',
           click: () => sendToRenderer('ui:export'),
         },
         {
-          label: 'Backup',
+          label: 'Copia formato Gestore',
+          accelerator: 'CommandOrControl+Shift+C',
+          click: () => sendToRenderer('ui:copy-gestore'),
+        },
+        { type: 'separator' },
+        {
+          label: 'Backup e ripristino',
+          click: () => sendToRenderer('ui:navigate', 'settings'),
+        },
+        {
+          label: 'Preferenze',
+          accelerator: 'CommandOrControl+,',
           click: () => sendToRenderer('ui:navigate', 'settings'),
         },
         { type: 'separator' },
@@ -175,17 +181,38 @@ function createAppMenu() {
       ],
     },
     {
-      label: 'Vai a',
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    },
+    {
+      label: 'View',
       submenu: [
         { label: 'Oggi', click: () => sendToRenderer('ui:navigate', 'day') },
         { label: 'Settimana', click: () => sendToRenderer('ui:navigate', 'week') },
         { label: 'Mese', click: () => sendToRenderer('ui:navigate', 'month') },
+        { label: 'Ricerca', click: () => sendToRenderer('ui:navigate', 'search') },
         { label: 'Clienti', click: () => sendToRenderer('ui:navigate', 'clients') },
+        { label: 'Impostazioni', click: () => sendToRenderer('ui:navigate', 'settings') },
+        { type: 'separator' },
+        ...(isDev ? [{ role: 'reload' }, { role: 'toggleDevTools' }] : []),
       ],
     },
     {
-      label: 'Strumenti',
+      label: 'Tools',
       submenu: [
+        {
+          label: 'Reset filtri',
+          click: () => sendToRenderer('ui:reset-filters'),
+        },
+        { type: 'separator' },
         {
           label: 'Apri cartella backup',
           click: () => {
@@ -199,17 +226,33 @@ function createAppMenu() {
             shell.openPath(app.getPath('logs'));
           },
         },
-        { type: 'separator' },
+      ],
+    },
+    {
+      label: 'Help',
+      submenu: [
         {
-          label: 'Reset filtri',
-          click: () => sendToRenderer('ui:reset-filters'),
+          label: 'Check aggiornamenti',
+          click: () => handleCheckForUpdates(),
         },
+        { role: 'about' },
       ],
     },
   ];
 
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
+}
+
+function handleCheckForUpdates() {
+  if (!app.isPackaged) {
+    dialog.showMessageBox({
+      type: 'info',
+      message: 'Check aggiornamenti disponibile solo nelle build rilasciate.',
+    });
+    return;
+  }
+  autoUpdater.checkForUpdatesAndNotify();
 }
 
 function scheduleGapReminder() {
@@ -269,6 +312,11 @@ function registerIpc() {
   ipcMain.handle('clients:inspectCsv', async (_event, filePath: string) => inspectCsv(filePath));
   ipcMain.handle('clients:importCsv', async (_event, filePath: string, column: string) => importClientsFromCsv(db, filePath, column));
 
+  ipcMain.handle('templates:list', () => listTemplates(db));
+  ipcMain.handle('templates:create', (_event, input) => createTemplate(db, input));
+  ipcMain.handle('templates:remove', (_event, id: string) => deleteTemplate(db, id));
+  ipcMain.handle('templates:use', (_event, id: string) => useTemplate(db, id));
+
   ipcMain.handle('summaries:daily', (_event, date: string) => getDailySummary(db, date));
   ipcMain.handle('summaries:weekly', (_event, startDate: string, endDate: string) => getWeeklySummary(db, startDate, endDate));
   ipcMain.handle('summaries:monthly', (_event, month: string) => getMonthlySummary(db, month));
@@ -283,15 +331,7 @@ function registerIpc() {
     if (canceled || !filePath) return null;
     return exportMonthlyXlsx(db, month, filePath);
   });
-  ipcMain.handle('exports:monthlyCsv', async (_event, month: string) => {
-    const { canceled, filePath } = await dialog.showSaveDialog({
-      title: 'Esporta CSV mese',
-      defaultPath: `TaskDesk-${month}.csv`,
-      filters: [{ name: 'CSV', extensions: ['csv'] }],
-    });
-    if (canceled || !filePath) return null;
-    return exportMonthlyCsv(db, month, filePath);
-  });
+  ipcMain.handle('exports:monthlyCopy', (_event, month: string) => exportMonthlyCopy(db, month));
 
   ipcMain.handle('backup:create', (_event, targetDir?: string) => createBackup(targetDir ?? resolveBackupDir()));
   ipcMain.handle('backup:list', () => listBackups(resolveBackupDir()));

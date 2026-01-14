@@ -16,6 +16,7 @@ import type {
   ActivityHistory,
   ActivityInput,
   ActivityStatus,
+  ActivityTemplate,
   AppSettings,
   BackupInfo,
   Client,
@@ -29,6 +30,13 @@ const minuteSuggestions = [15, 20, 30, 45];
 const smartSlotCandidates = [10, 15, 20, 25];
 
 type View = 'day' | 'week' | 'month' | 'search' | 'clients' | 'settings';
+
+type InlineEditState = {
+  title: string;
+  clientName: string;
+  minutes: number;
+  status: ActivityStatus;
+};
 
 const emptyInput: ActivityInput = {
   date: format(new Date(), 'yyyy-MM-dd'),
@@ -92,15 +100,19 @@ export default function App() {
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [recentClients, setRecentClients] = useState<Client[]>([]);
+  const [templates, setTemplates] = useState<ActivityTemplate[]>([]);
   const [backups, setBackups] = useState<BackupInfo[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [form, setForm] = useState<ActivityInput>({ ...emptyInput });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [inlineEditId, setInlineEditId] = useState<string | null>(null);
+  const [inlineEdit, setInlineEdit] = useState<InlineEditState | null>(null);
   const [history, setHistory] = useState<ActivityHistory[]>([]);
   const [searchFilters, setSearchFilters] = useState({ ...defaultSearchFilters });
   const [searchResults, setSearchResults] = useState<Activity[]>([]);
   const [patternMinutes, setPatternMinutes] = useState<number[]>([]);
+  const [quickFilter, setQuickFilter] = useState('');
   const [csvPath, setCsvPath] = useState<string | null>(null);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [csvSample, setCsvSample] = useState<Record<string, string>[]>([]);
@@ -124,6 +136,34 @@ export default function App() {
 
   const totalMinutes = activities.reduce((sum, activity) => sum + activity.minutes, 0);
   const gapMinutes = Math.max(targetMinutes - totalMinutes, 0);
+
+  const filteredActivities = useMemo(() => {
+    const term = quickFilter.trim().toLowerCase();
+    if (!term) return activities;
+    return activities.filter((activity) => {
+      const haystack = [
+        activity.title,
+        activity.clientName ?? '',
+        activity.description ?? '',
+        activity.referenceVerbale ?? '',
+        activity.resourceIcon ?? '',
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(term);
+    });
+  }, [activities, quickFilter]);
+
+  const dayAnomalies = useMemo(() => {
+    const counts = new Map<number, number>();
+    activities.forEach((activity) => {
+      counts.set(activity.minutes, (counts.get(activity.minutes) ?? 0) + 1);
+    });
+    const repeated = Array.from(counts.entries())
+      .filter(([minutes, count]) => minutes >= 60 && count >= 3)
+      .map(([minutes, count]) => ({ minutes, count }));
+    return repeated;
+  }, [activities]);
 
   const monthRange = useMemo(() => {
     const base = new Date(`${monthKey}-01T00:00:00`);
@@ -156,6 +196,10 @@ export default function App() {
   const monthTopClient = useMemo(() => {
     return monthlySummary?.byClient?.[0] ?? null;
   }, [monthlySummary?.byClient]);
+
+  const monthTopActivities = useMemo(() => {
+    return (monthlySummary?.groups ?? []).slice(0, 6);
+  }, [monthlySummary?.groups]);
 
   const weekDailyRows = useMemo(() => {
     const days = eachDayOfInterval({ start: parseISO(weekRange.start), end: parseISO(weekRange.end) });
@@ -222,6 +266,9 @@ export default function App() {
     window.api.ui.onExport(() => {
       handleExportMonth();
     });
+    window.api.ui.onCopyGestore(() => {
+      handleCopyGestore();
+    });
     window.api.ui.onResetFilters(() => {
       setSearchFilters({ ...defaultSearchFilters });
       setSearchResults([]);
@@ -235,6 +282,7 @@ export default function App() {
     });
     window.api.clients.list().then(setClients);
     window.api.clients.recent().then(setRecentClients);
+    window.api.templates.list().then(setTemplates);
     window.api.summaries.patterns(60).then(setPatternMinutes);
   }, []);
 
@@ -261,6 +309,8 @@ export default function App() {
   }, [view]);
 
   async function loadDay() {
+    setInlineEditId(null);
+    setInlineEdit(null);
     const list = await window.api.activities.list(selectedDate);
     setActivities(list);
     const summary = await window.api.summaries.daily(selectedDate);
@@ -277,6 +327,11 @@ export default function App() {
     const recent = await window.api.clients.recent();
     setClients(list);
     setRecentClients(recent);
+  }
+
+  async function refreshTemplates() {
+    const list = await window.api.templates.list();
+    setTemplates(list);
   }
 
   function applyTheme(theme: AppSettings['theme']) {
@@ -315,6 +370,7 @@ export default function App() {
   }
 
   function openEdit(activity: Activity) {
+    cancelInlineEdit();
     setEditingId(activity.id);
     setForm({
       date: activity.date,
@@ -334,6 +390,7 @@ export default function App() {
   }
 
   function openDuplicate(activity: Activity) {
+    cancelInlineEdit();
     setEditingId(null);
     setHistory([]);
     setForm({
@@ -350,6 +407,72 @@ export default function App() {
       verbaleDone: activity.verbaleDone,
     });
     setQuickAddOpen(true);
+  }
+
+  function startInlineEdit(activity: Activity) {
+    setInlineEditId(activity.id);
+    setInlineEdit({
+      title: activity.title,
+      clientName: activity.clientName ?? '',
+      minutes: activity.minutes,
+      status: activity.status,
+    });
+  }
+
+  function cancelInlineEdit() {
+    setInlineEditId(null);
+    setInlineEdit(null);
+  }
+
+  async function saveInlineEdit() {
+    if (!inlineEditId || !inlineEdit) return;
+    await window.api.activities.update(inlineEditId, {
+      title: inlineEdit.title,
+      clientName: inlineEdit.clientName,
+      minutes: inlineEdit.minutes,
+      status: inlineEdit.status,
+    });
+    cancelInlineEdit();
+    loadDay();
+    refreshClients();
+  }
+
+  async function handleTemplateApply(template: ActivityTemplate) {
+    setEditingId(null);
+    setHistory([]);
+    setForm({
+      date: selectedDate,
+      title: template.title,
+      clientName: template.clientName ?? undefined,
+      description: template.description ?? undefined,
+      minutes: template.minutes,
+      referenceVerbale: template.referenceVerbale ?? undefined,
+      resourceIcon: template.resourceIcon ?? undefined,
+      tags: template.tags,
+      status: 'bozza',
+      inGestore: false,
+      verbaleDone: false,
+    });
+    setQuickAddOpen(true);
+    await window.api.templates.use(template.id);
+    refreshTemplates();
+  }
+
+  async function handleSaveTemplate() {
+    if (!form.title.trim()) return;
+    await window.api.templates.create({
+      ...form,
+      date: form.date || selectedDate,
+      minutes: Number(form.minutes),
+      status: form.status ?? 'bozza',
+    });
+    refreshTemplates();
+    window.api.system.notify({ title: 'Preset salvato', body: 'Preset aggiunto alla libreria.' });
+  }
+
+  async function handleDeleteTemplate(id: string) {
+    await window.api.templates.remove(id);
+    refreshTemplates();
   }
 
   async function handleDelete(id: string) {
@@ -369,11 +492,22 @@ export default function App() {
     }
   }
 
-  async function handleExportCsv() {
-    const result = await window.api.exports.monthlyCsv(monthKey);
-    if (result) {
-      window.api.system.notify({ title: 'Export CSV completato', body: `File creato: ${result}` });
+  async function handleCopyGestore() {
+    const text = await window.api.exports.monthlyCopy(monthKey);
+    if (!text) return;
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
     }
+    window.api.system.notify({ title: 'Copia completata', body: 'Formato Gestore copiato negli appunti.' });
   }
 
   async function handleBackup() {
@@ -390,6 +524,7 @@ export default function App() {
     await window.api.backup.restore(selected);
     await loadDay();
     refreshClients();
+    refreshTemplates();
     window.api.summaries.weekly(weekRange.start, weekRange.end).then(setWeeklySummary);
     window.api.summaries.monthly(monthKey).then(setMonthlySummary);
     loadBackups();
@@ -435,7 +570,8 @@ export default function App() {
     refreshClients();
   }
 
-  const dayListHeight = Math.min(480, Math.max(240, activities.length * 120));
+  const dayRowSize = 160;
+  const dayListHeight = Math.min(520, Math.max(240, filteredActivities.length * dayRowSize));
   return (
     <div className="min-h-screen bg-sand text-ink">
       <div className="grid min-h-screen grid-cols-[260px_1fr]">
@@ -547,12 +683,70 @@ export default function App() {
                 </div>
               </div>
 
+              <div className="grid gap-4 lg:grid-cols-4">
+                <div className="rounded-xl border border-ink/10 bg-surface p-4 lg:col-span-2">
+                  <div className="text-xs uppercase text-ink/50">Ricerca rapida</div>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <input
+                      type="text"
+                      value={quickFilter}
+                      onChange={(event) => setQuickFilter(event.target.value)}
+                      placeholder="Cerca titolo, cliente, rif, risorsa"
+                      className="w-full rounded-lg border border-ink/10 px-3 py-2 text-sm md:w-auto md:flex-1"
+                    />
+                    <button
+                      className="rounded-lg border border-ink/10 px-3 py-2 text-xs"
+                      onClick={() => setQuickFilter('')}
+                    >
+                      Reset
+                    </button>
+                  </div>
+                  <div className="mt-2 text-xs text-ink/50">
+                    {filteredActivities.length} risultati su {activities.length} attivita
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-ink/10 bg-surface p-4">
+                  <div className="text-xs uppercase text-ink/50">Preset rapidi</div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {templates.slice(0, 6).map((template) => (
+                      <button
+                        key={template.id}
+                        className="rounded-full bg-ink/5 px-3 py-1 text-xs"
+                        onClick={() => handleTemplateApply(template)}
+                      >
+                        {template.title}
+                      </button>
+                    ))}
+                    {templates.length === 0 && <span className="text-xs text-ink/50">Nessun preset salvato.</span>}
+                  </div>
+                  <button
+                    className="mt-3 text-xs text-ink/60"
+                    onClick={() => setView('settings')}
+                  >
+                    Gestisci preset
+                  </button>
+                </div>
+
+                <div className="rounded-xl border border-ink/10 bg-surface p-4">
+                  <div className="text-xs uppercase text-ink/50">Anomalie</div>
+                  <div className="mt-3 grid gap-2 text-xs text-ink/70">
+                    {dayAnomalies.length === 0 && <span className="text-ink/50">Nessuna anomalia rilevata.</span>}
+                    {dayAnomalies.map((item) => (
+                      <div key={`anomaly-${item.minutes}`}>
+                        {item.count} voci da {item.minutes}m
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               <div className="rounded-xl border border-ink/10 bg-surface">
                 <div className="border-b border-ink/10 px-4 py-3 text-sm font-semibold">Attivita del giorno</div>
-                {activities.length > 0 ? (
-                  <List height={dayListHeight} itemCount={activities.length} itemSize={120} width="100%">
+                {filteredActivities.length > 0 ? (
+                  <List height={dayListHeight} itemCount={filteredActivities.length} itemSize={dayRowSize} width="100%">
                     {({ index, style }) => {
-                      const activity = activities[index];
+                      const activity = filteredActivities[index];
                       return (
                         <div
                           key={activity.id}
@@ -560,38 +754,119 @@ export default function App() {
                           className="flex flex-wrap items-start justify-between gap-4 border-b border-ink/10 px-4 py-4"
                           onDoubleClick={() => openEdit(activity)}
                         >
-                          <div>
-                            <div className="text-sm font-semibold">{activity.title}</div>
-                            <div className="text-xs text-ink/50">
-                              {activity.clientName ?? 'Nessun cliente'} - {activity.minutes} min
+                          {inlineEditId === activity.id && inlineEdit ? (
+                            <div className="w-full">
+                              <div className="grid gap-3 md:grid-cols-4">
+                                <label className="grid gap-2 text-xs">
+                                  Titolo
+                                  <input
+                                    type="text"
+                                    value={inlineEdit.title}
+                                    onChange={(event) =>
+                                      setInlineEdit((prev) => (prev ? { ...prev, title: event.target.value } : prev))
+                                    }
+                                    className="rounded-lg border border-ink/10 px-3 py-2 text-sm"
+                                  />
+                                </label>
+                                <label className="grid gap-2 text-xs">
+                                  Cliente
+                                  <input
+                                    type="text"
+                                    value={inlineEdit.clientName}
+                                    onChange={(event) =>
+                                      setInlineEdit((prev) => (prev ? { ...prev, clientName: event.target.value } : prev))
+                                    }
+                                    className="rounded-lg border border-ink/10 px-3 py-2 text-sm"
+                                  />
+                                </label>
+                                <label className="grid gap-2 text-xs">
+                                  Minuti
+                                  <input
+                                    type="number"
+                                    min={5}
+                                    value={inlineEdit.minutes}
+                                    onChange={(event) =>
+                                      setInlineEdit((prev) =>
+                                        prev ? { ...prev, minutes: Number(event.target.value) } : prev
+                                      )
+                                    }
+                                    className="rounded-lg border border-ink/10 px-3 py-2 text-sm"
+                                  />
+                                </label>
+                                <label className="grid gap-2 text-xs">
+                                  Stato
+                                  <select
+                                    value={inlineEdit.status}
+                                    onChange={(event) =>
+                                      setInlineEdit((prev) =>
+                                        prev ? { ...prev, status: event.target.value as ActivityStatus } : prev
+                                      )
+                                    }
+                                    className="rounded-lg border border-ink/10 px-3 py-2 text-sm"
+                                  >
+                                    <option value="bozza">Bozza</option>
+                                    <option value="inserita">Inserita</option>
+                                  </select>
+                                </label>
+                              </div>
+                              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+                                <div className="text-ink/50">
+                                  {activity.clientName ?? 'Nessun cliente'} - {activity.minutes} min
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <button className="rounded-lg bg-ink px-3 py-2 text-white" onClick={saveInlineEdit}>
+                                    Salva
+                                  </button>
+                                  <button className="text-ink/70" onClick={cancelInlineEdit}>
+                                    Annulla
+                                  </button>
+                                  <button className="text-ink/70" onClick={() => openEdit(activity)}>
+                                    Dettagli
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                            {activity.description && <p className="mt-2 text-sm text-ink/70">{activity.description}</p>}
-                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-ink/50">
-                              <span className="rounded-full bg-ink/5 px-2 py-1">Stato: {activity.status}</span>
-                              {activity.inGestore && <span className="rounded-full bg-teal/15 px-2 py-1">Caricata nel Gestore</span>}
-                              {activity.verbaleDone && <span className="rounded-full bg-amber/20 px-2 py-1">Verbale OK</span>}
-                              {activity.referenceVerbale && (
-                                <span className="rounded-full bg-ink/5 px-2 py-1">Rif: {activity.referenceVerbale}</span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 text-xs">
-                            <button className="text-ink/70" onClick={() => openEdit(activity)}>
-                              Modifica
-                            </button>
-                            <button className="text-ink/70" onClick={() => openDuplicate(activity)}>
-                              Duplica
-                            </button>
-                            <button className="text-danger" onClick={() => handleDelete(activity.id)}>
-                              Elimina
-                            </button>
-                          </div>
+                          ) : (
+                            <>
+                              <div>
+                                <div className="text-sm font-semibold">{activity.title}</div>
+                                <div className="text-xs text-ink/50">
+                                  {activity.clientName ?? 'Nessun cliente'} - {activity.minutes} min
+                                </div>
+                                {activity.description && <p className="mt-2 text-sm text-ink/70">{activity.description}</p>}
+                                <div className="mt-2 flex flex-wrap gap-2 text-xs text-ink/50">
+                                  <span className="rounded-full bg-ink/5 px-2 py-1">Stato: {activity.status}</span>
+                                  {activity.inGestore && <span className="rounded-full bg-teal/15 px-2 py-1">Caricata nel Gestore</span>}
+                                  {activity.verbaleDone && <span className="rounded-full bg-amber/20 px-2 py-1">Verbale OK</span>}
+                                  {activity.referenceVerbale && (
+                                    <span className="rounded-full bg-ink/5 px-2 py-1">Rif: {activity.referenceVerbale}</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs">
+                                <button className="text-ink/70" onClick={() => startInlineEdit(activity)}>
+                                  Modifica inline
+                                </button>
+                                <button className="text-ink/70" onClick={() => openEdit(activity)}>
+                                  Modifica
+                                </button>
+                                <button className="text-ink/70" onClick={() => openDuplicate(activity)}>
+                                  Duplica
+                                </button>
+                                <button className="text-danger" onClick={() => handleDelete(activity.id)}>
+                                  Elimina
+                                </button>
+                              </div>
+                            </>
+                          )}
                         </div>
                       );
                     }}
                   </List>
                 ) : (
-                  <div className="px-4 py-10 text-center text-sm text-ink/50">Nessuna attivita per questa data.</div>
+                  <div className="px-4 py-10 text-center text-sm text-ink/50">
+                    {quickFilter ? 'Nessuna attivita corrisponde al filtro.' : 'Nessuna attivita per questa data.'}
+                  </div>
                 )}
               </div>
             </section>
@@ -696,8 +971,8 @@ export default function App() {
                     <button className="rounded-lg bg-ink px-4 py-2 text-xs font-semibold text-white" onClick={handleExportMonth}>
                       Esporta XLSX
                     </button>
-                    <button className="rounded-lg border border-ink/10 px-4 py-2 text-xs" onClick={handleExportCsv}>
-                      Esporta CSV
+                    <button className="rounded-lg border border-ink/10 px-4 py-2 text-xs" onClick={handleCopyGestore}>
+                      Copia formato Gestore
                     </button>
                   </div>
                 </div>
@@ -720,7 +995,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-3">
+              <div className="grid gap-4 lg:grid-cols-4">
                 <div className="rounded-xl border border-ink/10 bg-surface lg:col-span-2">
                   <div className="border-b border-ink/10 px-4 py-3 text-sm font-semibold">Per giorno</div>
                   <div className="grid gap-0 md:grid-cols-2">
@@ -752,6 +1027,27 @@ export default function App() {
                       </div>
                     ))}
                     {(monthlySummary?.byClient ?? []).length === 0 && (
+                      <div className="px-4 py-8 text-center text-sm text-ink/50">Nessuna attivita.</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-ink/10 bg-surface">
+                  <div className="border-b border-ink/10 px-4 py-3 text-sm font-semibold">Top attivita</div>
+                  <div className="divide-y divide-black/10">
+                    {monthTopActivities.map((group) => (
+                      <div key={`${group.clientName}-${group.label}`} className="flex items-center justify-between px-4 py-3 text-sm">
+                        <div>
+                          <div className="font-semibold">{group.label}</div>
+                          <div className="text-xs text-ink/50">{group.clientName}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold">{formatMinutes(group.totalMinutes)}</div>
+                          <div className="text-xs text-ink/50">{group.totalEntries} voci</div>
+                        </div>
+                      </div>
+                    ))}
+                    {monthTopActivities.length === 0 && (
                       <div className="px-4 py-8 text-center text-sm text-ink/50">Nessuna attivita.</div>
                     )}
                   </div>
@@ -796,7 +1092,7 @@ export default function App() {
                   <div className="text-xs uppercase text-ink/50">Checklist chiusura mese</div>
                   <ul className="mt-3 grid gap-2 text-sm text-ink/70">
                     <li>Verifica attivita non inserite</li>
-                    <li>Esporta XLSX e CSV</li>
+                    <li>Esporta XLSX e copia formato Gestore</li>
                     <li>Controlla gap residuo e distribuzione</li>
                     <li>Backup finale del mese</li>
                   </ul>
@@ -1049,6 +1345,33 @@ export default function App() {
               </div>
 
               <div className="rounded-xl border border-ink/10 bg-surface">
+                <div className="border-b border-ink/10 px-4 py-3 text-sm font-semibold">Preset attivita</div>
+                <div className="divide-y divide-black/10">
+                  {templates.map((template) => (
+                    <div key={template.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+                      <div>
+                        <div className="font-semibold">{template.title}</div>
+                        <div className="text-xs text-ink/50">
+                          {template.clientName ?? 'Nessun cliente'} - {template.minutes} min
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs">
+                        <button className="text-ink/70" onClick={() => handleTemplateApply(template)}>
+                          Usa
+                        </button>
+                        <button className="text-danger" onClick={() => handleDeleteTemplate(template.id)}>
+                          Elimina
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {templates.length === 0 && (
+                    <div className="px-4 py-8 text-center text-sm text-ink/50">Nessun preset salvato.</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-ink/10 bg-surface">
                 <div className="border-b border-ink/10 px-4 py-3 text-sm font-semibold">Backup e ripristino</div>
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-4 py-3 text-sm text-ink/70">
                   <div>
@@ -1281,6 +1604,9 @@ export default function App() {
                   }}
                 >
                   Annulla
+                </button>
+                <button type="button" className="rounded-lg border border-ink/10 px-4 py-2 text-sm" onClick={handleSaveTemplate}>
+                  Salva preset
                 </button>
                 <button type="submit" className="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white">
                   Salva

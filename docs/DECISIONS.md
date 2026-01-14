@@ -19,6 +19,7 @@ TaskDesk richiede integrazioni OS (tray, global hotkey, notifiche), accesso loca
 - Electron Notification API: https://www.electronjs.org/docs/latest/api/notification
 - Electron Distribution overview: https://www.electronjs.org/pt/docs/latest/tutorial/distribution-overview
 - Electron Security best practices: https://www.electronjs.org/docs/latest/tutorial/security
+- Electron BrowserWindow contextIsolation: https://www.electronjs.org/docs/latest/api/browser-window
 - Tauri v2 system tray: https://v2.tauri.app/learn/system-tray/
 - Tauri global shortcut plugin: https://v2.tauri.app/plugin/global-shortcut/
 - Tauri notification plugin: https://v2.tauri.app/plugin/notification/
@@ -57,6 +58,28 @@ Serve un flusso prevedibile per distribuire EXE/Portable e DMG senza infrastrutt
 - Possiamo esporre un check aggiornamenti manuale e predisporre l'auto-update senza introdurre servizi esterni.
 - Le release restano versionate e tracciabili in `CHANGELOG.md`.
 - `electron-updater` e' cablato per check aggiornamenti in build packaged.
+- Per repository privati l'auto-update richiede token GitHub lato client; per questo manteniamo il check manuale e gli asset in release.
+
+## Evidence (links)
+- Electron-builder auto update: https://www.electron.build/auto-update.html
+- electron-builder GitHub publish (private): https://www.electron.build/configuration/publish.html
+
+---
+
+## Decision
+Toolchain bloccata su **Node.js LTS 20/22** per dev e CI.
+
+## Context
+`better-sqlite3` e' un modulo nativo con prebuild pensate per versioni LTS; usare versioni Current (es. Node 24) richiede compilazione locale con toolchain C++ e aumenta i fallimenti di installazione su Windows.
+Nota: anche se Node 24 e' LTS, congeliamo su 20/22 finche' non verifichiamo piena copertura di prebuild e compatibilita' con Electron.
+
+## Rationale
+- Usare solo LTS riduce i fallimenti di installazione e stabilizza la pipeline CI.
+- La policy LTS garantisce supporto e patch di sicurezza a lungo termine.
+
+## Evidence (links)
+- Node.js release status (LTS/Current): https://nodejs.org/en/download/releases/
+- better-sqlite3 README (prebuilt binaries for LTS): https://github.com/WiseLibs/better-sqlite3
 
 ---
 

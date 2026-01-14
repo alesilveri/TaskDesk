@@ -1,6 +1,5 @@
 import type Database from 'better-sqlite3';
 import ExcelJS from 'exceljs';
-import fs from 'node:fs';
 
 type ExportRow = {
   date: string;
@@ -27,13 +26,19 @@ function getMonthlyRows(db: Database.Database, month: string) {
     .all(`${month}-%`) as ExportRow[];
 }
 
-function csvEscape(value: string | number | null | undefined) {
-  if (value === null || value === undefined) return '';
-  const text = String(value);
-  if (text.includes('"') || text.includes(',') || text.includes('\n')) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
+function buildGestoreCopy(rows: ExportRow[]) {
+  const header = ['Data', 'Cliente', 'Titolo', 'Minuti', 'Rif Verbale', 'ICON'];
+  const lines = rows.map((row) =>
+    [
+      row.date,
+      row.client ?? 'Nessun cliente',
+      row.title,
+      row.minutes,
+      row.reference ?? '',
+      row.resource ?? '',
+    ].join('\t')
+  );
+  return [header.join('\t'), ...lines].join('\n');
 }
 
 export async function exportMonthlyXlsx(db: Database.Database, month: string, targetPath: string) {
@@ -91,7 +96,12 @@ export async function exportMonthlyXlsx(db: Database.Database, month: string, ta
     });
   });
 
-  const summarySheet = workbook.addWorksheet('Riepilogo');
+  const copySheet = workbook.addWorksheet('CopiaIncolla');
+  copySheet.columns = [{ header: 'Riga', key: 'line', width: 100 }];
+  const copyLines = buildGestoreCopy(rows).split('\n');
+  copyLines.forEach((line) => copySheet.addRow({ line }));
+
+  const summarySheet = workbook.addWorksheet('Report mese');
   summarySheet.columns = [
     { header: 'Cliente', key: 'client', width: 32 },
     { header: 'Minuti', key: 'minutes', width: 12 },
@@ -141,25 +151,7 @@ export async function exportMonthlyXlsx(db: Database.Database, month: string, ta
   await workbook.xlsx.writeFile(targetPath);
   return targetPath;
 }
-
-export async function exportMonthlyCsv(db: Database.Database, month: string, targetPath: string) {
+export function exportMonthlyCopy(db: Database.Database, month: string) {
   const rows = getMonthlyRows(db, month);
-  const header = ['Data', 'Cliente', 'Titolo', 'Rif Verbale', 'ICON', 'Minuti'];
-  const lines = [header.join(',')];
-
-  rows.forEach((row) => {
-    lines.push(
-      [
-        csvEscape(row.date),
-        csvEscape(row.client ?? 'Nessun cliente'),
-        csvEscape(row.title),
-        csvEscape(row.reference ?? ''),
-        csvEscape(row.resource ?? ''),
-        csvEscape(row.minutes),
-      ].join(',')
-    );
-  });
-
-  await fs.promises.writeFile(targetPath, lines.join('\n'), 'utf8');
-  return targetPath;
+  return buildGestoreCopy(rows);
 }

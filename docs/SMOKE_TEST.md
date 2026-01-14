@@ -16,6 +16,11 @@ Obiettivo: verificare che l'MVP funzioni end-to-end.
 2. Cambia minuti e stato, salva.
 3. Verifica che la cronologia mostri la modifica.
 
+## Modifica inline
+1. Usa "Modifica inline" su una voce.
+2. Cambia titolo, cliente o minuti.
+3. Salva e verifica l'aggiornamento.
+
 ## Ricerca
 1. Vai su "Ricerca".
 2. Filtra per cliente e range date.
@@ -23,8 +28,14 @@ Obiettivo: verificare che l'MVP funzioni end-to-end.
 
 ## Export
 1. Vai su "Mese".
-2. Esporta XLSX e CSV.
-3. Verifica i file generati.
+2. Esporta XLSX.
+3. Usa "Copia formato Gestore".
+4. Verifica il file e il testo negli appunti.
+
+## Preset
+1. Apri una nuova attivita, salva come preset.
+2. Applica il preset dalla vista Giorno o Impostazioni.
+3. Verifica che i campi si precompilino correttamente.
 
 ## Backup
 1. Vai su "Impostazioni".

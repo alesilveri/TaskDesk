@@ -9,13 +9,14 @@ TaskDesk e' un registro attivita smart, local-first, pensato per ricostruire le 
 ![Screenshot placeholder](assets/screenshot-placeholder.png)
 
 ## Highlights (MVP)
-- CRUD attivita con quick-add, duplicazione e cronologia minimale.
+- CRUD attivita con quick-add, inline edit, duplicazione e cronologia minimale.
 - Vista Giorno con totali, gap e smart filler.
 - Vista Settimana e Mese con breakdown per giorno e cliente.
-- Ricerca con filtri (cliente, testo, date, non inserite).
+- Ricerca con filtri e ricerca rapida nella vista Giorno.
+- Preset attivita riutilizzabili.
 - Rubrica clienti con autocomplete, recenti e import CSV.
 - SQLite local-first con WAL, migrazioni transazionali e backup pre-migrazione.
-- Export XLSX + CSV (Daily Task ICON + riepilogo cliente).
+- Export XLSX (Daily Task ICON + report mese) + copia formato Gestore.
 - Backup con rotazione e ripristino guidato.
 - Tray, menu app, hotkey globale e promemoria gap.
 - Temi light/dark/system.
@@ -27,8 +28,11 @@ TaskDesk e' un registro attivita smart, local-first, pensato per ricostruire le 
 - `references` materiali legacy utili
 
 ## Dev setup
+Richiede Node LTS 20/22 (vedi `apps/taskdesk/.nvmrc`).
+
 ```bash
 cd apps/taskdesk
+nvm use
 npm install
 npm run dev
 ```
@@ -49,8 +53,8 @@ npm run smoke
 1. Aggiorna `CHANGELOG.md` e `package.json` (versione).
 2. Crea tag `vX.Y.Z` e push:
    ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
+   git tag v1.0.1
+   git push origin v1.0.1
    ```
 3. GitHub Actions genera gli asset in release.
 

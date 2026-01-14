@@ -6,6 +6,21 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-01-14
+### Added
+- Node LTS enforcement (.nvmrc/.node-version + preinstall check).
+- Preset attivita with reuse and management.
+- Inline edit for daily activities and rapid search filter.
+- Copy-to-clipboard format for Gestore + copy sheet in XLSX export.
+- Month view top activities and anomaly detection.
+- App icons for Windows/macOS builds.
+
+### Changed
+- Export now ships XLSX only (Daily Task ICON + report mese).
+- Menu bar reshaped to File/Edit/View/Tools/Help with update check.
+- Release workflow updated to Node 22 LTS (build green).
+- Smoke script now reads the root smoke test guide.
+
 ## [1.0.0] - 2026-01-14
 ### Added
 - Repo cleanup and reference segregation (references/ + docs/prompts).

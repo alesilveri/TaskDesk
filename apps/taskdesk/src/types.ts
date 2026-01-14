@@ -32,6 +32,21 @@ export type ActivityInput = {
   verbaleDone?: boolean;
 };
 
+export type ActivityTemplate = {
+  id: string;
+  title: string;
+  clientName: string | null;
+  description: string | null;
+  minutes: number;
+  referenceVerbale: string | null;
+  resourceIcon: string | null;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  usedCount: number;
+  lastUsedAt: string | null;
+};
+
 export type DailySummary = {
   date: string;
   totalMinutes: number;

@@ -1,6 +1,7 @@
 import type {
   Activity,
   ActivityInput,
+  ActivityTemplate,
   DailySummary,
   WeeklySummary,
   MonthlySummary,
@@ -37,6 +38,12 @@ declare global {
         inspectCsv: (filePath: string) => Promise<{ headers: string[]; sample: Record<string, string>[] }>;
         importCsv: (filePath: string, column: string) => Promise<{ inserted: number; skipped: number }>;
       };
+      templates: {
+        list: () => Promise<ActivityTemplate[]>;
+        create: (input: ActivityInput) => Promise<ActivityTemplate | null>;
+        remove: (id: string) => Promise<boolean>;
+        use: (id: string) => Promise<ActivityTemplate | null>;
+      };
       summaries: {
         daily: (date: string) => Promise<DailySummary>;
         weekly: (startDate: string, endDate: string) => Promise<WeeklySummary>;
@@ -45,7 +52,7 @@ declare global {
       };
       exports: {
         monthly: (month: string) => Promise<string | null>;
-        monthlyCsv: (month: string) => Promise<string | null>;
+        monthlyCopy: (month: string) => Promise<string>;
       };
       backup: {
         create: (targetDir?: string) => Promise<string>;
@@ -70,6 +77,7 @@ declare global {
         onNavigate: (callback: (view: string) => void) => void;
         onQuickAdd: (callback: () => void) => void;
         onExport: (callback: () => void) => void;
+        onCopyGestore: (callback: () => void) => void;
         onResetFilters: (callback: () => void) => void;
       };
     };

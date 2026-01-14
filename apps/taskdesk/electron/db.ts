@@ -53,6 +53,21 @@ export type ActivityHistory = {
   changedAt: string;
 };
 
+export type ActivityTemplate = {
+  id: string;
+  title: string;
+  clientName: string | null;
+  description: string | null;
+  minutes: number;
+  referenceVerbale: string | null;
+  resourceIcon: string | null;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  usedCount: number;
+  lastUsedAt: string | null;
+};
+
 export type AppSettings = {
   dailyTargetMinutes: number;
   theme: 'light' | 'dark' | 'system';
@@ -158,6 +173,29 @@ const migrations = [
       `);
     },
   },
+  {
+    version: 3,
+    up: (db: Database.Database) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS activity_templates (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          client_name TEXT,
+          description TEXT,
+          minutes INTEGER NOT NULL,
+          reference_verbale TEXT,
+          resource_icon TEXT,
+          tags TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          used_count INTEGER NOT NULL DEFAULT 0,
+          last_used_at TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_activity_templates_last_used ON activity_templates(last_used_at);
+      `);
+    },
+  },
 ];
 
 export function openDb() {
@@ -231,8 +269,8 @@ function buildChangeSummary(previous: Activity, next: ActivityInput & { status: 
   if (previous.minutes !== next.minutes) changes.push('minuti');
   if ((previous.referenceVerbale ?? '') !== (next.referenceVerbale ?? '')) changes.push('rif verbale');
   if ((previous.resourceIcon ?? '') !== (next.resourceIcon ?? '')) changes.push('risorsa');
-  if (previous.status !== next.status) changes.push(`stato ${previous.status}→${next.status}`);
-  if (previous.inGestore !== next.inGestore) changes.push(`gestore ${previous.inGestore ? 'SI' : 'NO'}→${next.inGestore ? 'SI' : 'NO'}`);
+  if (previous.status !== next.status) changes.push(`stato ${previous.status}->${next.status}`);
+  if (previous.inGestore !== next.inGestore) changes.push(`gestore ${previous.inGestore ? 'SI' : 'NO'}->${next.inGestore ? 'SI' : 'NO'}`);
   if (previous.verbaleDone !== next.verbaleDone) changes.push('verbale');
   if (changes.length === 0) return null;
   return `Aggiornato: ${changes.join(', ')}`;
@@ -274,6 +312,58 @@ export function listRecentClients(db: Database.Database) {
       'SELECT id, name, created_at as createdAt, updated_at as updatedAt, last_used_at as lastUsedAt FROM clients WHERE last_used_at IS NOT NULL ORDER BY last_used_at DESC LIMIT 8'
     )
     .all() as Client[];
+}
+
+export function listTemplates(db: Database.Database) {
+  const rows = db
+    .prepare(
+      `SELECT id, title, client_name as clientName, description, minutes, reference_verbale as referenceVerbale, resource_icon as resourceIcon,
+        tags, created_at as createdAt, updated_at as updatedAt, used_count as usedCount, last_used_at as lastUsedAt
+      FROM activity_templates
+      ORDER BY COALESCE(last_used_at, updated_at) DESC, title ASC`
+    )
+    .all() as (Omit<ActivityTemplate, 'tags'> & { tags: string | null })[];
+
+  return rows.map((row) => ({
+    ...row,
+    tags: parseTags(row.tags),
+  }));
+}
+
+export function createTemplate(db: Database.Database, input: ActivityInput) {
+  const now = new Date().toISOString();
+  const id = randomUUID();
+  const clientName = input.clientName ? normalizeClientName(input.clientName) : null;
+
+  db.prepare(
+    `INSERT INTO activity_templates (
+      id, title, client_name, description, minutes, reference_verbale, resource_icon, tags, created_at, updated_at, used_count, last_used_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL)`
+  ).run(
+    id,
+    input.title,
+    clientName,
+    input.description ?? null,
+    input.minutes,
+    input.referenceVerbale ?? null,
+    input.resourceIcon ?? null,
+    normalizeTags(input.tags),
+    now,
+    now
+  );
+
+  return getTemplateById(db, id);
+}
+
+export function deleteTemplate(db: Database.Database, id: string) {
+  db.prepare('DELETE FROM activity_templates WHERE id = ?').run(id);
+  return true;
+}
+
+export function useTemplate(db: Database.Database, id: string) {
+  const now = new Date().toISOString();
+  db.prepare('UPDATE activity_templates SET used_count = used_count + 1, last_used_at = ? WHERE id = ?').run(now, id);
+  return getTemplateById(db, id);
 }
 
 export function createActivity(db: Database.Database, input: ActivityInput) {
@@ -712,5 +802,22 @@ function getActivityById(db: Database.Database, id: string) {
     status: (row.status ?? 'bozza') as ActivityStatus,
     inGestore: row.inGestore === 1,
     verbaleDone: row.verbaleDone === 1,
+  };
+}
+
+function getTemplateById(db: Database.Database, id: string) {
+  const row = db
+    .prepare(
+      `SELECT id, title, client_name as clientName, description, minutes, reference_verbale as referenceVerbale, resource_icon as resourceIcon,
+        tags, created_at as createdAt, updated_at as updatedAt, used_count as usedCount, last_used_at as lastUsedAt
+      FROM activity_templates
+      WHERE id = ?`
+    )
+    .get(id) as (Omit<ActivityTemplate, 'tags'> & { tags: string | null }) | undefined;
+
+  if (!row) return null;
+  return {
+    ...row,
+    tags: parseTags(row.tags),
   };
 }
