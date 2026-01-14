@@ -43,3 +43,29 @@ Dev velocity (MVP) | Stack web completo, meno requisiti esterni. | Richiede Rust
 
 ## Revisit
 Dopo l'MVP, rivalutare Tauri se footprint e consumo memoria diventano prioritari o se le capability soddisfano pienamente le esigenze di integrazione.
+
+---
+
+## Decision
+Update strategy basata su **GitHub Releases** con build multi-OS via GitHub Actions. Auto-update predisposto (feed GitHub) e check manuale dall'app.
+
+## Context
+Serve un flusso prevedibile per distribuire EXE/Portable e DMG senza infrastruttura dedicata. L'MVP deve poter rilasciare rapidamente e mantenere tracciabilita'.
+
+## Rationale
+- GitHub Releases e' semplice da gestire e si integra con `electron-builder`.
+- Possiamo esporre un check aggiornamenti manuale e predisporre l'auto-update senza introdurre servizi esterni.
+- Le release restano versionate e tracciabili in `CHANGELOG.md`.
+- `electron-updater` e' cablato per check aggiornamenti in build packaged.
+
+---
+
+## Decision
+UI kit **custom** basato su Tailwind + class-variance-authority, senza librerie UI pesanti.
+
+## Context
+Serve una UI premium, coerente e altamente personalizzabile (temi light/dark/system, stati evidenti, layout denso ma leggibile).
+
+## Rationale
+- Tailwind + CVA consente di definire componenti consistenti con controllo totale del design.
+- Evita vincoli di librerie generiche, mantenendo performance e payload snelli.

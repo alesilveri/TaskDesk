@@ -7,6 +7,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 ## [Unreleased]
 ### Added
 - Repo cleanup and reference segregation (references/ + docs/prompts).
+- Inspiration research doc and updated technical decisions.
 
 ### Changed
 - Updated AGENTS and repo hygiene defaults.
