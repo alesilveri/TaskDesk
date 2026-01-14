@@ -1,0 +1,43 @@
+<svg width='1600' height='400' viewBox='0 0 1600 400' fill='none' xmlns='http://www.w3.org/2000/svg'>
+  <defs>
+    <linearGradient id='bg' x1='0' y1='0' x2='1600' y2='400' gradientUnits='userSpaceOnUse'>
+      <stop offset='0' stop-color='#0B0F14'/>
+      <stop offset='1' stop-color='#1A232D'/>
+    </linearGradient>
+    <linearGradient id='accent' x1='0' y1='0' x2='1' y2='1'>
+      <stop offset='0' stop-color='#2BB3A3'/>
+      <stop offset='1' stop-color='#F59E0B'/>
+    </linearGradient>
+    <radialGradient id='glow' cx='0' cy='0' r='1' gradientUnits='userSpaceOnUse' gradientTransform='translate(1260 120) rotate(90) scale(220 320)'>
+      <stop offset='0' stop-color='#2BB3A3' stop-opacity='0.35'/>
+      <stop offset='1' stop-color='#2BB3A3' stop-opacity='0'/>
+    </radialGradient>
+  </defs>
+
+  <rect width='1600' height='400' fill='url(#bg)'/>
+  <rect x='1040' y='40' width='520' height='320' rx='36' fill='#0F141B' stroke='#24303A'/>
+  <circle cx='1260' cy='120' r='220' fill='url(#glow)'/>
+
+  <g opacity='0.18'>
+    <path d='M1040 120H1560' stroke='#93C5FD' stroke-width='1'/>
+    <path d='M1040 180H1560' stroke='#93C5FD' stroke-width='1'/>
+    <path d='M1040 240H1560' stroke='#93C5FD' stroke-width='1'/>
+    <path d='M1040 300H1560' stroke='#93C5FD' stroke-width='1'/>
+  </g>
+
+  <g transform='translate(1120 105)'>
+    <rect width='120' height='120' rx='28' fill='#101821' stroke='#2BB3A3' stroke-width='2'/>
+    <path d='M34 64L54 82L86 40' stroke='url(#accent)' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/>
+    <path d='M24 92H96' stroke='#25313C' stroke-width='6' stroke-linecap='round'/>
+  </g>
+
+  <text x='120' y='165' fill='#F4F6F8' font-family='Sora, Source Sans 3, sans-serif' font-size='64' font-weight='700' letter-spacing='0.5'>TaskDesk</text>
+  <text x='120' y='215' fill='#9AA3AF' font-family='Source Sans 3, sans-serif' font-size='26' font-weight='500'>Il tuo registro attivita smart, al posto di Excel.</text>
+
+  <g transform='translate(120 250)'>
+    <rect width='420' height='12' rx='6' fill='#1F2933'/>
+    <rect width='280' height='12' rx='6' fill='#2BB3A3'/>
+    <circle cx='300' cy='6' r='10' fill='#F59E0B'/>
+  </g>
+</svg>
+

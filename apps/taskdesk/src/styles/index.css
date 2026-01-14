@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+body {
+  font-family: 'Source Sans 3', system-ui, -apple-system, Segoe UI, sans-serif;
+}
+
+.heading {
+  font-family: 'Sora', 'Source Sans 3', system-ui, sans-serif;
+}
