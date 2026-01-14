@@ -52,6 +52,15 @@ async function run() {
     env,
   });
 
+  const shutdown = (signal) => {
+    if (!child.killed) {
+      child.kill(signal ?? 'SIGINT');
+    }
+  };
+
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+
   child.on('exit', (code) => {
     process.exit(code ?? 0);
   });

@@ -4,12 +4,12 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        ink: '#0B0F14',
-        sand: '#F7F4EF',
-        surface: '#FFFFFF',
-        teal: '#2BB3A3',
-        amber: '#F59E0B',
-        danger: '#E3514D',
+        ink: 'rgb(var(--color-ink) / <alpha-value>)',
+        sand: 'rgb(var(--color-sand) / <alpha-value>)',
+        surface: 'rgb(var(--color-surface) / <alpha-value>)',
+        teal: 'rgb(var(--color-teal) / <alpha-value>)',
+        amber: 'rgb(var(--color-amber) / <alpha-value>)',
+        danger: 'rgb(var(--color-danger) / <alpha-value>)',
       },
     },
   },

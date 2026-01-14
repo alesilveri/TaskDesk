@@ -1,5 +1,40 @@
 import type Database from 'better-sqlite3';
 import ExcelJS from 'exceljs';
+import fs from 'node:fs';
+
+type ExportRow = {
+  date: string;
+  client: string | null;
+  title: string;
+  description: string | null;
+  minutes: number;
+  reference: string | null;
+  resource: string | null;
+  inGestore: number;
+  verbale: number;
+};
+
+function getMonthlyRows(db: Database.Database, month: string) {
+  return db
+    .prepare(
+      `SELECT a.date as date, c.name as client, a.title as title, a.description as description,
+        a.minutes as minutes, a.reference_verbale as reference, a.resource_icon as resource, a.in_gestore as inGestore, a.verbale_done as verbale
+      FROM activities a
+      LEFT JOIN clients c ON a.client_id = c.id
+      WHERE a.date LIKE ?
+      ORDER BY a.date ASC`
+    )
+    .all(`${month}-%`) as ExportRow[];
+}
+
+function csvEscape(value: string | number | null | undefined) {
+  if (value === null || value === undefined) return '';
+  const text = String(value);
+  if (text.includes('"') || text.includes(',') || text.includes('\n')) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
 
 export async function exportMonthlyXlsx(db: Database.Database, month: string, targetPath: string) {
   const workbook = new ExcelJS.Workbook();
@@ -15,30 +50,11 @@ export async function exportMonthlyXlsx(db: Database.Database, month: string, ta
     { header: 'Minuti', key: 'minutes', width: 10 },
     { header: 'Rif Verbale', key: 'reference', width: 18 },
     { header: 'Risorsa/ICON', key: 'resource', width: 18 },
-    { header: 'Da inserire', key: 'inGestore', width: 12 },
+    { header: 'Caricata nel Gestore', key: 'inGestore', width: 18 },
     { header: 'Verbale fatto', key: 'verbale', width: 12 },
   ];
 
-  const rows = db
-    .prepare(
-      `SELECT a.date as date, c.name as client, a.title as title, a.description as description,
-        a.minutes as minutes, a.reference_verbale as reference, a.resource_icon as resource, a.in_gestore as inGestore, a.verbale_done as verbale
-      FROM activities a
-      LEFT JOIN clients c ON a.client_id = c.id
-      WHERE a.date LIKE ?
-      ORDER BY a.date ASC`
-    )
-    .all(`${month}-%`) as {
-      date: string;
-      client: string | null;
-      title: string;
-      description: string | null;
-      minutes: number;
-      reference: string | null;
-      resource: string | null;
-      inGestore: number;
-      verbale: number;
-    }[];
+  const rows = getMonthlyRows(db, month);
 
   rows.forEach((row) => {
     activitySheet.addRow({
@@ -102,7 +118,7 @@ export async function exportMonthlyXlsx(db: Database.Database, month: string, ta
     });
   });
 
-  const insertSheet = workbook.addWorksheet('Da inserire');
+  const insertSheet = workbook.addWorksheet('Non inserite');
   insertSheet.columns = [
     { header: 'Data', key: 'date', width: 12 },
     { header: 'Cliente', key: 'client', width: 28 },
@@ -111,7 +127,7 @@ export async function exportMonthlyXlsx(db: Database.Database, month: string, ta
     { header: 'Rif Verbale', key: 'reference', width: 18 },
   ];
 
-  const insertRows = rows.filter((row) => row.inGestore === 1);
+  const insertRows = rows.filter((row) => row.inGestore === 0);
   insertRows.forEach((row) => {
     insertSheet.addRow({
       date: row.date,
@@ -123,5 +139,27 @@ export async function exportMonthlyXlsx(db: Database.Database, month: string, ta
   });
 
   await workbook.xlsx.writeFile(targetPath);
+  return targetPath;
+}
+
+export async function exportMonthlyCsv(db: Database.Database, month: string, targetPath: string) {
+  const rows = getMonthlyRows(db, month);
+  const header = ['Data', 'Cliente', 'Titolo', 'Rif Verbale', 'ICON', 'Minuti'];
+  const lines = [header.join(',')];
+
+  rows.forEach((row) => {
+    lines.push(
+      [
+        csvEscape(row.date),
+        csvEscape(row.client ?? 'Nessun cliente'),
+        csvEscape(row.title),
+        csvEscape(row.reference ?? ''),
+        csvEscape(row.resource ?? ''),
+        csvEscape(row.minutes),
+      ].join(',')
+    );
+  });
+
+  await fs.promises.writeFile(targetPath, lines.join('\n'), 'utf8');
   return targetPath;
 }

@@ -1,3 +1,5 @@
+export type ActivityStatus = 'bozza' | 'inserita';
+
 export type Activity = {
   id: string;
   date: string;
@@ -9,6 +11,7 @@ export type Activity = {
   referenceVerbale: string | null;
   resourceIcon: string | null;
   tags: string[];
+  status: ActivityStatus;
   inGestore: boolean;
   verbaleDone: boolean;
   createdAt: string;
@@ -24,6 +27,7 @@ export type ActivityInput = {
   referenceVerbale?: string;
   resourceIcon?: string;
   tags?: string[];
+  status?: ActivityStatus;
   inGestore?: boolean;
   verbaleDone?: boolean;
 };
@@ -58,12 +62,28 @@ export type Client = {
   name: string;
   createdAt: string;
   updatedAt: string;
+  lastUsedAt: string | null;
 };
 
 export type BackupInfo = {
   path: string;
   name: string;
   createdAt: string;
+};
+
+export type ActivityHistory = {
+  id: string;
+  activityId: string;
+  summary: string;
+  changedAt: string;
+};
+
+export type AppSettings = {
+  dailyTargetMinutes: number;
+  theme: 'light' | 'dark' | 'system';
+  gapReminderMinutes: number;
+  backupDir: string | null;
+  autoStart: boolean;
 };
 
 export type SummaryByDate = {

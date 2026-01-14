@@ -16,5 +16,6 @@ export default defineConfig({
   server: {
     port: Number(process.env.TASKDESK_DEV_SERVER_PORT ?? process.env.VITE_DEV_SERVER_PORT ?? 5173),
     strictPort: true,
+    host: '127.0.0.1',
   },
 });

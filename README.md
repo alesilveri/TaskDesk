@@ -2,30 +2,29 @@
 
 # TaskDesk
 
-![Build](https://github.com/ORG/REPO/actions/workflows/release.yml/badge.svg)
+![Build](https://github.com/alesilveri/TaskDesk/actions/workflows/release.yml/badge.svg)
 
-Il tuo registro attivita smart, al posto di Excel. TaskDesk e una desktop app local-first per registrare attivita, tempi e riepiloghi Giorno/Settimana/Mese in modo chiaro e credibile.
+TaskDesk e' un registro attivita smart, local-first, pensato per ricostruire le attivita da inserire nel gestore commesse. Non e' un tool di fatturazione: il focus e' la chiarezza e la credibilita' di Giorno/Settimana/Mese.
 
 ![Screenshot placeholder](assets/screenshot-placeholder.png)
 
 ## Highlights (MVP)
-- CRUD attivita con quick-add e duplicazione.
-- Vista Giorno con totali e gap rispetto target.
-- Vista Settimana e Mese con totali, gap e breakdown cliente/giorno.
-- Rubrica clienti con autocomplete.
-- SQLite local-first con WAL e migrazioni.
-- Tray + hotkey base (Ctrl/Cmd+Shift+N).
-- Export XLSX (Attivita / Riepilogo / Da inserire / Daily Task ICON).
+- CRUD attivita con quick-add, duplicazione e cronologia minimale.
+- Vista Giorno con totali, gap e smart filler.
+- Vista Settimana e Mese con breakdown per giorno e cliente.
+- Ricerca con filtri (cliente, testo, date, non inserite).
+- Rubrica clienti con autocomplete, recenti e import CSV.
+- SQLite local-first con WAL, migrazioni transazionali e backup pre-migrazione.
+- Export XLSX + CSV (Daily Task ICON + riepilogo cliente).
 - Backup con rotazione e ripristino guidato.
-- Smart gap e smart grouping per chiusura mese.
-
-## Roadmap breve
-- Command palette e search globale.
+- Tray, menu app, hotkey globale e promemoria gap.
+- Temi light/dark/system.
 
 ## Struttura repo
-- `apps/taskdesk` progetto applicazione
+- `apps/taskdesk` app Electron
 - `docs` documentazione
 - `assets` branding e media
+- `references` materiali legacy utili
 
 ## Dev setup
 ```bash
@@ -40,5 +39,20 @@ cd apps/taskdesk
 npm run build
 ```
 
-## Note
-TaskDesk e una app personale: nessun dato esce dal computer. Il database vive in `AppData/TaskDesk` (Windows) o `~/Library/Application Support/TaskDesk` (macOS).
+## Smoke test
+```bash
+cd apps/taskdesk
+npm run smoke
+```
+
+## Release
+1. Aggiorna `CHANGELOG.md` e `package.json` (versione).
+2. Crea tag `vX.Y.Z` e push:
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+3. GitHub Actions genera gli asset in release.
+
+## Note privacy
+Tutti i dati sono locali. Il database vive in `app.getPath('userData')` (Windows: `%APPDATA%\\TaskDesk`, macOS: `~/Library/Application Support/TaskDesk`).

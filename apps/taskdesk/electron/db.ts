@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import path from 'node:path';
+import fs from 'node:fs';
 import { app } from 'electron';
 import { randomUUID } from 'node:crypto';
 
@@ -12,9 +13,12 @@ export type ActivityInput = {
   referenceVerbale?: string;
   resourceIcon?: string;
   tags?: string[];
+  status?: ActivityStatus;
   inGestore?: boolean;
   verbaleDone?: boolean;
 };
+
+export type ActivityStatus = 'bozza' | 'inserita';
 
 export type Activity = {
   id: string;
@@ -27,6 +31,7 @@ export type Activity = {
   referenceVerbale: string | null;
   resourceIcon: string | null;
   tags: string[];
+  status: ActivityStatus;
   inGestore: boolean;
   verbaleDone: boolean;
   createdAt: string;
@@ -38,7 +43,55 @@ export type Client = {
   name: string;
   createdAt: string;
   updatedAt: string;
+  lastUsedAt: string | null;
 };
+
+export type ActivityHistory = {
+  id: string;
+  activityId: string;
+  summary: string;
+  changedAt: string;
+};
+
+export type AppSettings = {
+  dailyTargetMinutes: number;
+  theme: 'light' | 'dark' | 'system';
+  gapReminderMinutes: number;
+  backupDir: string | null;
+  autoStart: boolean;
+};
+
+const defaultSettings = {
+  dailyTargetMinutes: 8 * 60,
+  theme: 'system' as const,
+  gapReminderMinutes: 60,
+  backupDir: null as string | null,
+  autoStart: false,
+};
+
+function timestamp() {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(
+    now.getSeconds()
+  )}`;
+}
+
+function copySidecars(sourceDb: string, targetBase: string) {
+  const wal = `${sourceDb}-wal`;
+  const shm = `${sourceDb}-shm`;
+  if (fs.existsSync(wal)) fs.copyFileSync(wal, `${targetBase}-wal`);
+  if (fs.existsSync(shm)) fs.copyFileSync(shm, `${targetBase}-shm`);
+}
+
+function createMigrationBackup(dbPath: string) {
+  if (!fs.existsSync(dbPath)) return;
+  const backupDir = path.join(app.getPath('userData'), 'backups');
+  fs.mkdirSync(backupDir, { recursive: true });
+  const backupPath = path.join(backupDir, `taskdesk-migration-${timestamp()}.sqlite`);
+  fs.copyFileSync(dbPath, backupPath);
+  copySidecars(dbPath, backupPath);
+}
 
 const migrations = [
   {
@@ -80,16 +133,46 @@ const migrations = [
       `);
     },
   },
+  {
+    version: 2,
+    up: (db: Database.Database) => {
+      db.exec(`
+        ALTER TABLE activities ADD COLUMN status TEXT NOT NULL DEFAULT 'bozza';
+        ALTER TABLE clients ADD COLUMN last_used_at TEXT;
+
+        CREATE TABLE IF NOT EXISTS activity_history (
+          id TEXT PRIMARY KEY,
+          activity_id TEXT NOT NULL,
+          summary TEXT NOT NULL,
+          changed_at TEXT NOT NULL,
+          FOREIGN KEY (activity_id) REFERENCES activities(id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_activity_history_activity ON activity_history(activity_id);
+        CREATE INDEX IF NOT EXISTS idx_activities_status ON activities(status);
+
+        CREATE TABLE IF NOT EXISTS app_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        );
+      `);
+    },
+  },
 ];
 
 export function openDb() {
   const dbPath = path.join(app.getPath('userData'), 'taskdesk.sqlite');
+  const hadDb = fs.existsSync(dbPath);
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   db.exec('CREATE TABLE IF NOT EXISTS schema_version (id INTEGER PRIMARY KEY CHECK (id = 1), version INTEGER NOT NULL);');
   db.exec('INSERT OR IGNORE INTO schema_version (id, version) VALUES (1, 0);');
   const currentVersion = db.prepare('SELECT version FROM schema_version WHERE id = 1').get() as { version: number } | undefined;
   const version = currentVersion?.version ?? 0;
+  const targetVersion = migrations[migrations.length - 1]?.version ?? version;
+  if (hadDb && version < targetVersion) {
+    createMigrationBackup(dbPath);
+  }
   for (const migration of migrations) {
     if (migration.version > version) {
       const tx = db.transaction(() => {
@@ -99,6 +182,7 @@ export function openDb() {
       tx();
     }
   }
+  ensureDefaultSettings(db);
   return db;
 }
 
@@ -112,24 +196,84 @@ function parseTags(tags: string | null) {
   return tags.split(',').map((tag) => tag.trim()).filter(Boolean);
 }
 
+function normalizeClientName(name: string) {
+  return name.trim().replace(/\s+/g, ' ');
+}
+
+function touchClient(db: Database.Database, clientId: string) {
+  db.prepare('UPDATE clients SET last_used_at = ? WHERE id = ?').run(new Date().toISOString(), clientId);
+}
+
+function ensureDefaultSettings(db: Database.Database) {
+  const existing = db.prepare('SELECT key, value FROM app_settings').all() as { key: string; value: string }[];
+  const map = new Map(existing.map((row) => [row.key, row.value]));
+  const insert = db.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?)');
+
+  const defaults: Record<string, string> = {
+    daily_target_minutes: String(defaultSettings.dailyTargetMinutes),
+    theme: defaultSettings.theme,
+    gap_reminder_minutes: String(defaultSettings.gapReminderMinutes),
+    backup_dir: '',
+    auto_start: defaultSettings.autoStart ? '1' : '0',
+  };
+
+  Object.entries(defaults).forEach(([key, value]) => {
+    if (!map.has(key)) {
+      insert.run(key, value);
+    }
+  });
+}
+
+function buildChangeSummary(previous: Activity, next: ActivityInput & { status: ActivityStatus; inGestore: boolean }) {
+  const changes: string[] = [];
+  if (previous.title !== next.title) changes.push('titolo');
+  if ((previous.description ?? '') !== (next.description ?? '')) changes.push('descrizione');
+  if (previous.minutes !== next.minutes) changes.push('minuti');
+  if ((previous.referenceVerbale ?? '') !== (next.referenceVerbale ?? '')) changes.push('rif verbale');
+  if ((previous.resourceIcon ?? '') !== (next.resourceIcon ?? '')) changes.push('risorsa');
+  if (previous.status !== next.status) changes.push(`stato ${previous.status}→${next.status}`);
+  if (previous.inGestore !== next.inGestore) changes.push(`gestore ${previous.inGestore ? 'SI' : 'NO'}→${next.inGestore ? 'SI' : 'NO'}`);
+  if (previous.verbaleDone !== next.verbaleDone) changes.push('verbale');
+  if (changes.length === 0) return null;
+  return `Aggiornato: ${changes.join(', ')}`;
+}
+
 export function upsertClient(db: Database.Database, name: string) {
   const now = new Date().toISOString();
-  const existing = db.prepare('SELECT id, name, created_at as createdAt, updated_at as updatedAt FROM clients WHERE name = ?').get(name) as Client | undefined;
-  if (existing) return existing;
+  const normalized = normalizeClientName(name);
+  const existing = db
+    .prepare('SELECT id, name, created_at as createdAt, updated_at as updatedAt, last_used_at as lastUsedAt FROM clients WHERE lower(name) = lower(?)')
+    .get(normalized) as Client | undefined;
+  if (existing) {
+    db.prepare('UPDATE clients SET updated_at = ?, last_used_at = ? WHERE id = ?').run(now, now, existing.id);
+    return { ...existing, updatedAt: now, lastUsedAt: now };
+  }
 
   const id = randomUUID();
-  db.prepare('INSERT INTO clients (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)').run(id, name, now, now);
-  return { id, name, createdAt: now, updatedAt: now };
+  db.prepare('INSERT INTO clients (id, name, created_at, updated_at, last_used_at) VALUES (?, ?, ?, ?, ?)').run(id, normalized, now, now, now);
+  return { id, name: normalized, createdAt: now, updatedAt: now, lastUsedAt: now };
 }
 
 export function listClients(db: Database.Database) {
-  return db.prepare('SELECT id, name, created_at as createdAt, updated_at as updatedAt FROM clients ORDER BY name').all() as Client[];
+  return db
+    .prepare('SELECT id, name, created_at as createdAt, updated_at as updatedAt, last_used_at as lastUsedAt FROM clients ORDER BY name')
+    .all() as Client[];
 }
 
 export function searchClients(db: Database.Database, term: string) {
   return db
-    .prepare('SELECT id, name, created_at as createdAt, updated_at as updatedAt FROM clients WHERE name LIKE ? ORDER BY name LIMIT 20')
+    .prepare(
+      'SELECT id, name, created_at as createdAt, updated_at as updatedAt, last_used_at as lastUsedAt FROM clients WHERE name LIKE ? ORDER BY name LIMIT 20'
+    )
     .all(`%${term}%`) as Client[];
+}
+
+export function listRecentClients(db: Database.Database) {
+  return db
+    .prepare(
+      'SELECT id, name, created_at as createdAt, updated_at as updatedAt, last_used_at as lastUsedAt FROM clients WHERE last_used_at IS NOT NULL ORDER BY last_used_at DESC LIMIT 8'
+    )
+    .all() as Client[];
 }
 
 export function createActivity(db: Database.Database, input: ActivityInput) {
@@ -138,12 +282,14 @@ export function createActivity(db: Database.Database, input: ActivityInput) {
   if (input.clientName) {
     clientId = upsertClient(db, input.clientName).id;
   }
+  const status: ActivityStatus = input.status ?? (input.inGestore ? 'inserita' : 'bozza');
+  const inGestore = input.inGestore ?? status === 'inserita';
 
   const id = randomUUID();
   db.prepare(
     `INSERT INTO activities (
-      id, date, client_id, title, description, minutes, reference_verbale, resource_icon, tags, in_gestore, verbale_done, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      id, date, client_id, title, description, minutes, reference_verbale, resource_icon, tags, status, in_gestore, verbale_done, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     input.date,
@@ -154,7 +300,8 @@ export function createActivity(db: Database.Database, input: ActivityInput) {
     input.referenceVerbale ?? null,
     input.resourceIcon ?? null,
     normalizeTags(input.tags),
-    input.inGestore ? 1 : 0,
+    status,
+    inGestore ? 1 : 0,
     input.verbaleDone ? 1 : 0,
     now,
     now
@@ -172,6 +319,10 @@ export function updateActivity(db: Database.Database, id: string, input: Partial
     clientId = upsertClient(db, input.clientName).id;
   }
 
+  const nextStatus: ActivityStatus =
+    input.status ?? (input.inGestore ? 'inserita' : existing.status ?? 'bozza');
+  const nextInGestore = input.inGestore ?? (input.status ? input.status === 'inserita' : existing.inGestore);
+
   const updated = {
     date: input.date ?? existing.date,
     title: input.title ?? existing.title,
@@ -180,7 +331,8 @@ export function updateActivity(db: Database.Database, id: string, input: Partial
     referenceVerbale: input.referenceVerbale ?? existing.referenceVerbale,
     resourceIcon: input.resourceIcon ?? existing.resourceIcon,
     tags: input.tags ?? existing.tags,
-    inGestore: input.inGestore ?? existing.inGestore,
+    status: nextStatus,
+    inGestore: nextInGestore,
     verbaleDone: input.verbaleDone ?? existing.verbaleDone,
   };
 
@@ -194,6 +346,7 @@ export function updateActivity(db: Database.Database, id: string, input: Partial
       reference_verbale = ?,
       resource_icon = ?,
       tags = ?,
+      status = ?,
       in_gestore = ?,
       verbale_done = ?,
       updated_at = ?
@@ -207,11 +360,22 @@ export function updateActivity(db: Database.Database, id: string, input: Partial
     updated.referenceVerbale ?? null,
     updated.resourceIcon ?? null,
     normalizeTags(updated.tags),
+    updated.status,
     updated.inGestore ? 1 : 0,
     updated.verbaleDone ? 1 : 0,
     new Date().toISOString(),
     id
   );
+
+  const summary = buildChangeSummary(existing, updated);
+  if (summary) {
+    db.prepare('INSERT INTO activity_history (id, activity_id, summary, changed_at) VALUES (?, ?, ?, ?)').run(
+      randomUUID(),
+      id,
+      summary,
+      new Date().toISOString()
+    );
+  }
 
   return getActivityById(db, id);
 }
@@ -225,18 +389,24 @@ export function listActivitiesByDate(db: Database.Database, date: string) {
   const rows = db
     .prepare(
       `SELECT a.id, a.date, a.client_id as clientId, c.name as clientName, a.title, a.description, a.minutes,
-        a.reference_verbale as referenceVerbale, a.resource_icon as resourceIcon, a.tags, a.in_gestore as inGestore,
+        a.reference_verbale as referenceVerbale, a.resource_icon as resourceIcon, a.tags, a.status as status, a.in_gestore as inGestore,
         a.verbale_done as verbaleDone, a.created_at as createdAt, a.updated_at as updatedAt
       FROM activities a
       LEFT JOIN clients c ON a.client_id = c.id
       WHERE a.date = ?
       ORDER BY a.created_at ASC`
     )
-    .all(date) as (Omit<Activity, 'tags' | 'inGestore' | 'verbaleDone'> & { tags: string | null; inGestore: number; verbaleDone: number })[];
+    .all(date) as (Omit<Activity, 'tags' | 'inGestore' | 'verbaleDone' | 'status'> & {
+      tags: string | null;
+      status: string | null;
+      inGestore: number;
+      verbaleDone: number;
+    })[];
 
   return rows.map((row) => ({
     ...row,
     tags: parseTags(row.tags),
+    status: row.status as ActivityStatus,
     inGestore: row.inGestore === 1,
     verbaleDone: row.verbaleDone === 1,
   }));
@@ -387,22 +557,159 @@ export function getMonthlySummary(db: Database.Database, month: string) {
   };
 }
 
+export function listActivityHistory(db: Database.Database, activityId: string, limit = 5) {
+  return db
+    .prepare(
+      'SELECT id, activity_id as activityId, summary, changed_at as changedAt FROM activity_history WHERE activity_id = ? ORDER BY changed_at DESC LIMIT ?'
+    )
+    .all(activityId, limit) as ActivityHistory[];
+}
+
+export function searchActivities(
+  db: Database.Database,
+  filters: {
+    text?: string;
+    client?: string;
+    status?: ActivityStatus | 'all';
+    startDate?: string;
+    endDate?: string;
+    onlyNotInserted?: boolean;
+  }
+) {
+  const clauses: string[] = [];
+  const params: (string | number)[] = [];
+
+  if (filters.startDate) {
+    clauses.push('a.date >= ?');
+    params.push(filters.startDate);
+  }
+  if (filters.endDate) {
+    clauses.push('a.date <= ?');
+    params.push(filters.endDate);
+  }
+  if (filters.text) {
+    clauses.push('(a.title LIKE ? OR a.description LIKE ? OR a.reference_verbale LIKE ?)');
+    const like = `%${filters.text}%`;
+    params.push(like, like, like);
+  }
+  if (filters.client) {
+    clauses.push('c.name LIKE ?');
+    params.push(`%${filters.client}%`);
+  }
+  if (filters.status && filters.status !== 'all') {
+    clauses.push('a.status = ?');
+    params.push(filters.status);
+  }
+  if (filters.onlyNotInserted) {
+    clauses.push('a.in_gestore = 0');
+  }
+
+  const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const rows = db
+    .prepare(
+      `SELECT a.id, a.date, a.client_id as clientId, c.name as clientName, a.title, a.description, a.minutes,
+        a.reference_verbale as referenceVerbale, a.resource_icon as resourceIcon, a.tags, a.status as status, a.in_gestore as inGestore,
+        a.verbale_done as verbaleDone, a.created_at as createdAt, a.updated_at as updatedAt
+      FROM activities a
+      LEFT JOIN clients c ON a.client_id = c.id
+      ${whereClause}
+      ORDER BY a.date DESC, a.created_at DESC
+      LIMIT 500`
+    )
+    .all(...params) as (Omit<Activity, 'tags' | 'inGestore' | 'verbaleDone' | 'status'> & {
+    tags: string | null;
+    status: string | null;
+    inGestore: number;
+    verbaleDone: number;
+  })[];
+
+  return rows.map((row) => ({
+    ...row,
+    tags: parseTags(row.tags),
+    status: (row.status ?? 'bozza') as ActivityStatus,
+    inGestore: row.inGestore === 1,
+    verbaleDone: row.verbaleDone === 1,
+  }));
+}
+
+function formatDateForDb(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function getDurationPatterns(db: Database.Database, days = 45) {
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const rows = db
+    .prepare(
+      `SELECT minutes, COUNT(*) as count
+      FROM activities
+      WHERE date >= ?
+      GROUP BY minutes
+      ORDER BY count DESC`
+    )
+    .all(formatDateForDb(since)) as { minutes: number; count: number }[];
+
+  return rows.map((row) => row.minutes);
+}
+
+export function getSettings(db: Database.Database): AppSettings {
+  const rows = db.prepare('SELECT key, value FROM app_settings').all() as { key: string; value: string }[];
+  const map = new Map(rows.map((row) => [row.key, row.value]));
+
+  return {
+    dailyTargetMinutes: Number(map.get('daily_target_minutes') ?? defaultSettings.dailyTargetMinutes),
+    theme: (map.get('theme') as AppSettings['theme']) ?? defaultSettings.theme,
+    gapReminderMinutes: Number(map.get('gap_reminder_minutes') ?? defaultSettings.gapReminderMinutes),
+    backupDir: map.get('backup_dir') ? (map.get('backup_dir') as string) : null,
+    autoStart: (map.get('auto_start') ?? '0') === '1',
+  };
+}
+
+export function setSettings(db: Database.Database, partial: Partial<AppSettings>) {
+  const existing = getSettings(db);
+  const merged: AppSettings = {
+    dailyTargetMinutes: partial.dailyTargetMinutes ?? existing.dailyTargetMinutes,
+    theme: partial.theme ?? existing.theme,
+    gapReminderMinutes: partial.gapReminderMinutes ?? existing.gapReminderMinutes,
+    backupDir: partial.backupDir ?? existing.backupDir,
+    autoStart: partial.autoStart ?? existing.autoStart,
+  };
+
+  const update = db.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
+  update.run('daily_target_minutes', String(merged.dailyTargetMinutes));
+  update.run('theme', merged.theme);
+  update.run('gap_reminder_minutes', String(merged.gapReminderMinutes));
+  update.run('backup_dir', merged.backupDir ?? '');
+  update.run('auto_start', merged.autoStart ? '1' : '0');
+
+  return merged;
+}
+
 function getActivityById(db: Database.Database, id: string) {
   const row = db
     .prepare(
       `SELECT a.id, a.date, a.client_id as clientId, c.name as clientName, a.title, a.description, a.minutes,
-        a.reference_verbale as referenceVerbale, a.resource_icon as resourceIcon, a.tags, a.in_gestore as inGestore,
+        a.reference_verbale as referenceVerbale, a.resource_icon as resourceIcon, a.tags, a.status as status, a.in_gestore as inGestore,
         a.verbale_done as verbaleDone, a.created_at as createdAt, a.updated_at as updatedAt
       FROM activities a
       LEFT JOIN clients c ON a.client_id = c.id
       WHERE a.id = ?`
     )
-    .get(id) as (Omit<Activity, 'tags' | 'inGestore' | 'verbaleDone'> & { tags: string | null; inGestore: number; verbaleDone: number }) | undefined;
+    .get(id) as (Omit<Activity, 'tags' | 'inGestore' | 'verbaleDone' | 'status'> & {
+      tags: string | null;
+      status: string | null;
+      inGestore: number;
+      verbaleDone: number;
+    }) | undefined;
 
   if (!row) return null;
   return {
     ...row,
     tags: parseTags(row.tags),
+    status: (row.status ?? 'bozza') as ActivityStatus,
     inGestore: row.inGestore === 1,
     verbaleDone: row.verbaleDone === 1,
   };
