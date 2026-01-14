@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
 ## [Unreleased]
+
+## [1.0.0] - 2026-01-14
 ### Added
 - Repo cleanup and reference segregation (references/ + docs/prompts).
 - Inspiration research doc and updated technical decisions.
