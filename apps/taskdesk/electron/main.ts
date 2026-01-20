@@ -35,6 +35,8 @@ let db: ReturnType<typeof openDb>;
 const isDev = !app.isPackaged;
 const devPort = Number(process.env.TASKDESK_DEV_SERVER_PORT ?? process.env.VITE_DEV_SERVER_PORT ?? 5173);
 let lastGapReminderDate: string | null = null;
+const allowedExternalHosts = new Set(['github.com', 'www.github.com']);
+const allowedDevOrigins = new Set([`http://127.0.0.1:${devPort}`, 'http://127.0.0.1:5173', 'http://127.0.0.1:5174']);
 
 function formatDateKey(date: Date) {
   const year = date.getFullYear();
@@ -69,6 +71,48 @@ async function loadRenderer() {
   }
 }
 
+function isAllowedNavigation(url: string) {
+  if (url.startsWith('file://')) return true;
+  try {
+    const parsed = new URL(url);
+    if (isDev && allowedDevOrigins.has(parsed.origin)) return true;
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+function isAllowedExternalUrl(raw: string) {
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'https:') return false;
+    return allowedExternalHosts.has(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function setupNavigationGuards(window: BrowserWindow) {
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (isAllowedExternalUrl(url)) {
+      shell.openExternal(url);
+    } else {
+      console.warn('[taskdesk:security] blocked window.open', url);
+    }
+    return { action: 'deny' };
+  });
+
+  window.webContents.on('will-navigate', (event, url) => {
+    if (isAllowedNavigation(url)) return;
+    event.preventDefault();
+    if (isAllowedExternalUrl(url)) {
+      shell.openExternal(url);
+    } else {
+      console.warn('[taskdesk:security] blocked navigation', url);
+    }
+  });
+}
+
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -87,6 +131,7 @@ function createMainWindow() {
   });
 
   loadRenderer();
+  setupNavigationGuards(mainWindow);
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -385,7 +430,13 @@ function registerIpc() {
     }
   });
 
-  ipcMain.handle('system:openExternal', (_event, url: string) => shell.openExternal(url));
+  ipcMain.handle('system:openExternal', (_event, url: string) => {
+    if (!isAllowedExternalUrl(url)) {
+      console.warn('[taskdesk:security] blocked openExternal', url);
+      return false;
+    }
+    return shell.openExternal(url);
+  });
 }
 
 const gotLock = app.requestSingleInstanceLock();

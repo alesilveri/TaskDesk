@@ -76,6 +76,9 @@ export type AppSettings = {
   autoStart: boolean;
 };
 
+const MIN_ACTIVITY_MINUTES = 5;
+const MAX_ACTIVITY_MINUTES = 12 * 60;
+
 const defaultSettings = {
   dailyTargetMinutes: 8 * 60,
   theme: 'system' as const,
@@ -276,6 +279,30 @@ function buildChangeSummary(previous: Activity, next: ActivityInput & { status: 
   return `Aggiornato: ${changes.join(', ')}`;
 }
 
+function assertValidDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new Error('Data non valida. Usa il formato YYYY-MM-DD.');
+  }
+}
+
+function assertValidTitle(value: string) {
+  if (!value || value.trim().length === 0) {
+    throw new Error('Titolo obbligatorio.');
+  }
+}
+
+function assertValidMinutes(value: number) {
+  if (!Number.isFinite(value)) {
+    throw new Error('Minuti non validi.');
+  }
+  if (!Number.isInteger(value)) {
+    throw new Error('Minuti devono essere un numero intero.');
+  }
+  if (value < MIN_ACTIVITY_MINUTES || value > MAX_ACTIVITY_MINUTES) {
+    throw new Error(`Minuti devono essere tra ${MIN_ACTIVITY_MINUTES} e ${MAX_ACTIVITY_MINUTES}.`);
+  }
+}
+
 export function upsertClient(db: Database.Database, name: string) {
   const now = new Date().toISOString();
   const normalized = normalizeClientName(name);
@@ -332,6 +359,8 @@ export function listTemplates(db: Database.Database) {
 
 export function createTemplate(db: Database.Database, input: ActivityInput) {
   const now = new Date().toISOString();
+  assertValidTitle(input.title);
+  assertValidMinutes(input.minutes);
   const id = randomUUID();
   const clientName = input.clientName ? normalizeClientName(input.clientName) : null;
 
@@ -368,6 +397,9 @@ export function useTemplate(db: Database.Database, id: string) {
 
 export function createActivity(db: Database.Database, input: ActivityInput) {
   const now = new Date().toISOString();
+  assertValidDate(input.date);
+  assertValidTitle(input.title);
+  assertValidMinutes(input.minutes);
   let clientId: string | null = null;
   if (input.clientName) {
     clientId = upsertClient(db, input.clientName).id;
@@ -403,6 +435,10 @@ export function createActivity(db: Database.Database, input: ActivityInput) {
 export function updateActivity(db: Database.Database, id: string, input: Partial<ActivityInput>) {
   const existing = getActivityById(db, id);
   if (!existing) return null;
+
+  if (typeof input.date === 'string') assertValidDate(input.date);
+  if (typeof input.title === 'string') assertValidTitle(input.title);
+  if (typeof input.minutes === 'number') assertValidMinutes(input.minutes);
 
   let clientId = existing.clientId;
   if (input.clientName) {
