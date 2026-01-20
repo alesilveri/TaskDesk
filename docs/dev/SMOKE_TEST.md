@@ -2,6 +2,10 @@
 
 Obiettivo: verificare che l'MVP funzioni end-to-end.
 
+## Smoke automatico
+`npm run smoke` crea un DB temporaneo, inserisce 3 attivita, genera un XLSX e verifica che il file esista e sia > 0.
+Se fallisce, controlla l'output e lancia `npm run build:electron` prima di riprovare.
+
 ## Avvio
 1. `npm run dev` in `apps/taskdesk`.
 2. Verifica che la finestra Electron si apra e non mostri errori.
