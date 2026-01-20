@@ -188,6 +188,8 @@ function sendToRenderer(channel: string, payload?: unknown) {
 }
 
 function createAppMenu() {
+  const devViewItems: Electron.MenuItemConstructorOptions[] = isDev ? [{ role: 'reload' }, { role: 'toggleDevTools' }] : [];
+
   const template: Electron.MenuItemConstructorOptions[] = [
     {
       label: 'File',
@@ -247,7 +249,7 @@ function createAppMenu() {
         { label: 'Clienti', click: () => sendToRenderer('ui:navigate', 'clients') },
         { label: 'Impostazioni', click: () => sendToRenderer('ui:navigate', 'settings') },
         { type: 'separator' },
-        ...(isDev ? [{ role: 'reload' }, { role: 'toggleDevTools' }] : []),
+        ...devViewItems,
       ],
     },
     {

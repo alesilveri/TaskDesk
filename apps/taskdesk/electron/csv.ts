@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { parse } from 'csv-parse/sync';
-import type { Database } from 'better-sqlite3';
+import Database from 'better-sqlite3';
 import { upsertClient } from './db';
 
 function normalizeClientName(name: string) {

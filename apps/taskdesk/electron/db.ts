@@ -493,7 +493,14 @@ export function updateActivity(db: Database.Database, id: string, input: Partial
     id
   );
 
-  const summary = buildChangeSummary(existing, updated);
+  const updatedInput: ActivityInput & { status: ActivityStatus; inGestore: boolean } = {
+    ...updated,
+    description: updated.description ?? undefined,
+    referenceVerbale: updated.referenceVerbale ?? undefined,
+    resourceIcon: updated.resourceIcon ?? undefined,
+  };
+
+  const summary = buildChangeSummary(existing, updatedInput);
   if (summary) {
     db.prepare('INSERT INTO activity_history (id, activity_id, summary, changed_at) VALUES (?, ?, ?, ?)').run(
       randomUUID(),
