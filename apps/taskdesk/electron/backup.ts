@@ -8,7 +8,13 @@ function timestamp() {
   return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 }
 
-const defaultRetention = 10;
+const defaultRetention = {
+  daily: 7,
+  weekly: 4,
+  monthly: 6,
+};
+
+const backupPattern = /^taskdesk-backup-(\d{8})-(\d{6})\.sqlite$/;
 
 function getBackupDir(targetDir?: string) {
   const userData = app.getPath('userData');
@@ -44,10 +50,59 @@ export function listBackups(targetDir?: string) {
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
-function rotateBackups(targetDir?: string, keep = defaultRetention) {
+function parseBackupDate(name: string) {
+  const match = name.match(backupPattern);
+  if (!match) return null;
+  const datePart = match[1];
+  const timePart = match[2];
+  const year = Number(datePart.slice(0, 4));
+  const month = Number(datePart.slice(4, 6)) - 1;
+  const day = Number(datePart.slice(6, 8));
+  const hour = Number(timePart.slice(0, 2));
+  const minute = Number(timePart.slice(2, 4));
+  const second = Number(timePart.slice(4, 6));
+  return new Date(year, month, day, hour, minute, second);
+}
+
+function getISOWeekKey(date: Date) {
+  const utc = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = utc.getUTCDay() || 7;
+  utc.setUTCDate(utc.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((utc.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `${utc.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
+function rotateBackups(targetDir?: string) {
   const backups = listBackups(targetDir);
-  const overflow = backups.slice(keep);
-  overflow.forEach((backup) => {
+  const dailyKeep = new Set<string>();
+  const weeklyKeep = new Set<string>();
+  const monthlyKeep = new Set<string>();
+  const keepPaths = new Set<string>();
+
+  backups.forEach((backup) => {
+    const parsed = parseBackupDate(backup.name) ?? new Date(backup.createdAt);
+    const dayKey = parsed.toISOString().slice(0, 10);
+    const weekKey = getISOWeekKey(parsed);
+    const monthKey = dayKey.slice(0, 7);
+
+    if (dailyKeep.size < defaultRetention.daily && !dailyKeep.has(dayKey)) {
+      dailyKeep.add(dayKey);
+      keepPaths.add(backup.path);
+      return;
+    }
+    if (weeklyKeep.size < defaultRetention.weekly && !weeklyKeep.has(weekKey)) {
+      weeklyKeep.add(weekKey);
+      keepPaths.add(backup.path);
+      return;
+    }
+    if (monthlyKeep.size < defaultRetention.monthly && !monthlyKeep.has(monthKey)) {
+      monthlyKeep.add(monthKey);
+      keepPaths.add(backup.path);
+    }
+  });
+
+  backups.filter((backup) => !keepPaths.has(backup.path)).forEach((backup) => {
     try {
       fs.unlinkSync(backup.path);
       const wal = `${backup.path}-wal`;
@@ -82,6 +137,13 @@ export function restoreBackup(backupPath: string) {
   const targetDb = getDbPath();
   if (!fs.existsSync(sourceDb)) {
     throw new Error('Backup file not found.');
+  }
+  if (fs.existsSync(targetDb)) {
+    const backupDir = getBackupDir();
+    fs.mkdirSync(backupDir, { recursive: true });
+    const safetyPath = path.join(backupDir, `taskdesk-pre-restore-${timestamp()}.sqlite`);
+    fs.copyFileSync(targetDb, safetyPath);
+    copySidecars(targetDb, safetyPath);
   }
   fs.copyFileSync(sourceDb, targetDb);
   copySidecars(sourceDb, targetDb);

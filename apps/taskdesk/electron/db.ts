@@ -80,7 +80,7 @@ export type AppSettings = {
 };
 
 const MIN_ACTIVITY_MINUTES = 5;
-const MAX_ACTIVITY_MINUTES = 12 * 60;
+const MAX_ACTIVITY_MINUTES = 240;
 
 const defaultSettings = {
   dailyTargetMinutes: 8 * 60,

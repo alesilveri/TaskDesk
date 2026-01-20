@@ -39,9 +39,29 @@ function getRowsByRange(db: Database.Database, startDate: string, endDate: strin
     .all(startDate, endDate) as ExportRow[];
 }
 
+function groupRowsForGestore(rows: ExportRow[]) {
+  const grouped = new Map<string, ExportRow & { minutes: number }>();
+  rows.forEach((row) => {
+    const label = row.reference && row.reference.trim().length > 0 ? row.reference : row.title;
+    const key = [row.date, row.client ?? 'Nessun cliente', label].join('|');
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.minutes += row.minutes;
+      return;
+    }
+    grouped.set(key, {
+      ...row,
+      title: label,
+      minutes: row.minutes,
+    });
+  });
+  return Array.from(grouped.values()).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+}
+
 function buildGestoreCopy(rows: ExportRow[]) {
   const header = ['Data', 'Cliente', 'Titolo', 'Minuti', 'Rif Verbale', 'ICON'];
-  const lines = rows.map((row) =>
+  const groupedRows = groupRowsForGestore(rows);
+  const lines = groupedRows.map((row) =>
     [
       row.date,
       row.client ?? 'Nessun cliente',
