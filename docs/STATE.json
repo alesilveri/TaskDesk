@@ -8,17 +8,17 @@
     "Refactor App into views/components/utils",
     "Base unit tests + vitest config",
     "Moved dev docs to docs/dev and refreshed README",
-    "Engine-strict enforcement for Node LTS"
+    "Engine-strict enforcement for Node LTS",
+    "Installed local Node 22 runtime and validated npm ci/dev/build/test/smoke"
   ],
   "remaining": [
-    "Run dev/build/smoke on Node 22 and verify runtime",
-    "Update screenshot with a real capture",
+    "Replace screenshot placeholder with a real capture",
     "Review npm audit vulnerabilities",
     "Timezone Europe/Rome handling"
   ],
   "next": [
-    "Install Node 22 LTS and run npm ci/dev/build/test/smoke",
     "Capture real app screenshot and replace assets/screenshot.png",
-    "Revisit audit docs and update remaining gaps"
+    "Decide npm audit strategy (fix vs ignore) after dependency review",
+    "Implement timezone Europe/Rome handling"
   ]
 }
