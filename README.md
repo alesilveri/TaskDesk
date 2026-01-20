@@ -2,61 +2,37 @@
 
 # TaskDesk
 
-![Build](https://github.com/alesilveri/TaskDesk/actions/workflows/release.yml/badge.svg)
+Registro attivita smart, local-first, per ricostruire le attivita da riportare nel Gestore. Non e un tool di fatturazione: qui conta la chiarezza e la credibilita di Giorno/Settimana/Mese.
 
-TaskDesk e' un registro attivita smart, local-first, pensato per ricostruire le attivita da inserire nel gestore commesse. Non e' un tool di fatturazione: il focus e' la chiarezza e la credibilita' di Giorno/Settimana/Mese.
+![Screenshot](assets/screenshot.png)
 
-![Screenshot placeholder](assets/screenshot-placeholder.png)
+## Per chi e
+- Consulenti e team piccoli che compilano un Gestore a fine mese.
+- Chi vuole una vista chiara dei gap, senza inventare nulla.
 
-## Highlights (MVP)
-- CRUD attivita con quick-add, inline edit, duplicazione e cronologia minimale.
-- Vista Giorno con totali, gap e smart filler.
-- Vista Settimana e Mese con breakdown per giorno e cliente.
-- Ricerca con filtri e ricerca rapida nella vista Giorno.
-- Preset attivita riutilizzabili.
-- Rubrica clienti con autocomplete, recenti e import CSV.
-- SQLite local-first con WAL, migrazioni transazionali e backup pre-migrazione.
-- Export XLSX (Daily Task ICON + report mese) + copia formato Gestore.
+## Installazione
+- Scarica l'ultima release da GitHub Releases.
+- Installa l'app (Windows/macOS) e avviala.
+
+## Uso in 2 minuti
+1. Apri TaskDesk e crea una nuova attivita con il pulsante "+ Nuova attivita".
+2. Compila titolo, cliente, minuti e stato (Bozza/Inserita).
+3. Vai su "Mese" per il colpo d'occhio: gap, giorni incompleti, top clienti.
+4. Esporta il mese in XLSX e copia il formato Gestore.
+
+## Funzioni principali
+- CRUD attivita con quick-add, inline edit, duplicazione.
+- Viste Giorno/Settimana/Mese con gap e smart grouping.
+- Preset riutilizzabili e clienti con import CSV.
+- Export XLSX + copia formato Gestore.
 - Backup con rotazione e ripristino guidato.
-- Tray, menu app, hotkey globale e promemoria gap.
-- Temi light/dark/system.
+- Tray, menu app, hotkey globale e temi light/dark/system.
 
-## Struttura repo
-- `apps/taskdesk` app Electron
-- `docs` documentazione
-- `assets` branding e media
-- `references` materiali legacy utili
+## Privacy
+Dati locali, zero cloud. Il database vive in `app.getPath('userData')`.
 
-## Dev setup
-Richiede Node LTS 20/22 (vedi `apps/taskdesk/.nvmrc`).
+## Sviluppo
+Documentazione tecnica in `docs/dev/DEV_SETUP.md`.
 
-```bash
-cd apps/taskdesk
-nvm use
-npm install
-npm run dev
-```
-
-## Build
-```bash
-cd apps/taskdesk
-npm run build
-```
-
-## Smoke test
-```bash
-cd apps/taskdesk
-npm run smoke
-```
-
-## Release
-1. Aggiorna `CHANGELOG.md` e `package.json` (versione).
-2. Crea tag `vX.Y.Z` e push:
-   ```bash
-   git tag v1.0.1
-   git push origin v1.0.1
-   ```
-3. GitHub Actions genera gli asset in release.
-
-## Note privacy
-Tutti i dati sono locali. Il database vive in `app.getPath('userData')` (Windows: `%APPDATA%\\TaskDesk`, macOS: `~/Library/Application Support/TaskDesk`).
+## Licenza
+MIT

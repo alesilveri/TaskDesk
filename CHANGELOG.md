@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
 ## [Unreleased]
+### Added
+- Command palette (Ctrl+K) and keyboard shortcuts for main views.
+- Month calendar heatmap with missing-day highlight.
+- Activity meta chips (tag/verbale/risorsa) with quick filters.
+- Base unit tests for utils.
+
+### Changed
+- Electron navigation hardening (block external navigation + whitelist openExternal).
+- Activity validation (title + minutes range) enforced in UI and DB.
+- Refactor App into views/components and shared utils.
+- README user-first and dev docs moved under docs/dev.
+- Node engine strict enforcement for installs.
 
 ## [1.0.1] - 2026-01-14
 ### Added

@@ -1,0 +1,24 @@
+{
+  "date": "2026-01-20",
+  "done": [
+    "Electron navigation hardening (block will-navigate/window.open + openExternal whitelist)",
+    "Activity validation enforced in DB and UI (title/minutes + warnings)",
+    "Command palette + keyboard shortcuts for core views",
+    "Month calendar heatmap with missing-day highlight",
+    "Refactor App into views/components/utils",
+    "Base unit tests + vitest config",
+    "Moved dev docs to docs/dev and refreshed README",
+    "Engine-strict enforcement for Node LTS"
+  ],
+  "remaining": [
+    "Run dev/build/smoke on Node 22 and verify runtime",
+    "Update screenshot with a real capture",
+    "Review npm audit vulnerabilities",
+    "Timezone Europe/Rome handling"
+  ],
+  "next": [
+    "Install Node 22 LTS and run npm ci/dev/build/test/smoke",
+    "Capture real app screenshot and replace assets/screenshot.png",
+    "Revisit audit docs and update remaining gaps"
+  ]
+}

@@ -4,35 +4,40 @@ Obiettivo: riferimenti per UX/reporting/time log. Solo idee, nessuna copia.
 
 ## ActivityWatch
 Link: https://activitywatch.net/
-Cosa prendiamo:
-- Privacy-first con dati locali.
-- Auto-tracking + timeline per ricostruire il giorno.
-- Categorizzazione automatica (app/sito).
+- Auto-tracking locale con timeline per ricostruire la giornata.
+- Pattern: categorizzazione per app/sito e breakdown per giorno.
+
+## RescueTime
+Link: https://www.rescuetime.com/
+- Auto-tracking con report giornalieri e trend settimanali.
+- Pattern: categorie produttivita e obiettivi giornalieri.
+
+## Toggl Track (Desktop)
+Link: https://toggl.com/track/toggl-desktop/
+- Timeline per colmare gap e inserire manualmente.
+- Pattern: quick add, idle detection, export semplice.
+
+## Timing (macOS)
+Link: https://timingapp.com/
+- Timeline visiva con raggruppamenti automatici per progetto.
+- Pattern: regole per classificare attivita in automatico.
+
+## Rize
+Link: https://rize.io/
+- Auto-tracking + focus session con feedback soft.
+- Pattern: suggerimenti su routine e produttivita personale.
+
+## ManicTime
+Link: https://www.manictime.com/docs
+- Time tracking automatico con timeline dettagliata.
+- Pattern: overview giornaliera con filtri rapidi.
+
+## Timemator
+Link: https://timemator.com/
+- Timer manuale con automazioni di tracking.
+- Pattern: trigger per app/siti e tag automatici.
 
 ## Super Productivity
 Link: https://super-productivity.com/use-cases/time-tracker/
-Cosa prendiamo:
-- Timer integrato con task e note.
-- Riepiloghi giornalieri e settimanali semplici.
-- Focus su workflow "calmo" e offline.
-
-## Kimai
-Link: https://www.kimai.org/en/open-source-time-tracker
-Cosa prendiamo:
-- Reportistica chiara con export dati.
-- Struttura Cliente/Progetto/Attivita.
-- Nessun lock-in, export semplice.
-
-## Toggl Track
-Link: https://toggl.com/track/toggl-desktop/
-Cosa prendiamo:
-- Timeline per colmare gap e ricostruire la giornata.
-- UI pulita e leggibile con quick actions.
-- Obiettivi/target per giorno o settimana.
-
-## Clockify
-Link: https://clockify.me/help/apps/windows-desktop-app
-Cosa prendiamo:
-- Supporto offline con sync successiva.
-- Modalita manuale + timer.
-- Semplicita' nel logging.
+- Time tracking integrato con task e note.
+- Pattern: riepiloghi daily/weekly semplici e offline-first.
