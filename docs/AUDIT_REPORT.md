@@ -15,7 +15,7 @@
     - `/scripts` dev/smoke/check-node
   - `/docs` documentazione
   - `/assets` branding e screenshot placeholder
-  - `/references` materiale legacy
+- `/docs/dev/legacy/references` materiale legacy
 
 - Dichiarato in AGENTS/README/CHANGELOG:
   - TaskDesk = tracker personale local-first, non fatturazione; focus su viste Giorno/Settimana/Mese e gap credibili.
