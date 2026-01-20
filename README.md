@@ -32,7 +32,7 @@ Registro attivita smart, local-first, per ricostruire le attivita da riportare n
 Dati locali, zero cloud. Il database vive in `app.getPath('userData')`.
 
 ## Sviluppo
-Documentazione tecnica in `docs/dev/DEV_SETUP.md`.
+Documentazione tecnica in `docs/DEV_SETUP.md`.
 
 ## Licenza
 MIT

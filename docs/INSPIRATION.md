@@ -41,3 +41,8 @@ Link: https://timemator.com/
 Link: https://super-productivity.com/use-cases/time-tracker/
 - Time tracking integrato con task e note.
 - Pattern: riepiloghi daily/weekly semplici e offline-first.
+
+## RegistroAttivita (app collega, offline)
+Link: (non pubblico)
+- Import CSV clienti come onboarding rapido.
+- Pattern: codici cliente e flag (es. canone attivo) utili per filtri/report.

@@ -7,10 +7,12 @@
     "Month calendar heatmap with missing-day highlight",
     "Refactor App into views/components/utils",
     "Base unit tests + vitest config",
-    "Moved dev docs to docs/dev and refreshed README",
+    "Moved dev docs to docs/ and refreshed README",
     "Engine-strict enforcement for Node LTS",
     "Installed local Node 22 runtime and validated npm ci/dev/build/test/smoke",
-    "Project cleanup: removed build artifacts, removed unused assets, removed legacy references"
+    "Project cleanup: removed build artifacts, removed unused assets, removed legacy references",
+    "Docs cleanup: removed outdated dev notes (audit/keep-drop/insights) and refreshed inspiration",
+    "Local Node 22 run: npm ci, test, build, smoke"
   ],
   "remaining": [
     "Replace screenshot placeholder with a real capture",
