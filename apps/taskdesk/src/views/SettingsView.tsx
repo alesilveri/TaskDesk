@@ -3,6 +3,8 @@ import type { ActivityTemplate, AppSettings, BackupInfo } from '../types';
 export type SettingsViewProps = {
   settings: AppSettings | null;
   targetMinutes: number;
+  weekTargetMinutes: number;
+  workingDaysPerWeek: 5 | 6 | 7;
   templates: ActivityTemplate[];
   backups: BackupInfo[];
   onTemplateApply: (template: ActivityTemplate) => void;
@@ -18,6 +20,8 @@ export type SettingsViewProps = {
 export default function SettingsView({
   settings,
   targetMinutes,
+  weekTargetMinutes,
+  workingDaysPerWeek,
   templates,
   backups,
   onTemplateApply,
@@ -43,6 +47,19 @@ export default function SettingsView({
               onChange={(event) => onSettingsUpdate({ dailyTargetMinutes: Number(event.target.value) })}
               className="rounded-lg border border-ink/10 px-3 py-2"
             />
+          </label>
+          <label className="grid gap-2 text-sm">
+            Giorni lavorativi/settimana
+            <select
+              value={workingDaysPerWeek}
+              onChange={(event) => onSettingsUpdate({ workingDaysPerWeek: Number(event.target.value) as 5 | 6 | 7 })}
+              className="rounded-lg border border-ink/10 px-3 py-2"
+            >
+              <option value={5}>5 (lun-ven)</option>
+              <option value={6}>6 (lun-sab)</option>
+              <option value={7}>7 (tutti)</option>
+            </select>
+            <span className="text-xs text-ink/50">Target settimanale: {weekTargetMinutes} min</span>
           </label>
           <label className="grid gap-2 text-sm">
             Promemoria gap (min)
@@ -74,6 +91,22 @@ export default function SettingsView({
               onChange={(event) => onSettingsUpdate({ autoStart: event.target.checked })}
             />
             Avvio automatico
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={settings?.trayEnabled ?? true}
+              onChange={(event) => onSettingsUpdate({ trayEnabled: event.target.checked })}
+            />
+            Tray attivo
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={settings?.hotkeyEnabled ?? true}
+              onChange={(event) => onSettingsUpdate({ hotkeyEnabled: event.target.checked })}
+            />
+            Hotkey Quick Add
           </label>
         </div>
       </div>

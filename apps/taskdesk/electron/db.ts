@@ -70,10 +70,13 @@ export type ActivityTemplate = {
 
 export type AppSettings = {
   dailyTargetMinutes: number;
+  workingDaysPerWeek: 5 | 6 | 7;
   theme: 'light' | 'dark' | 'system';
   gapReminderMinutes: number;
   backupDir: string | null;
   autoStart: boolean;
+  trayEnabled: boolean;
+  hotkeyEnabled: boolean;
 };
 
 const MIN_ACTIVITY_MINUTES = 5;
@@ -81,10 +84,13 @@ const MAX_ACTIVITY_MINUTES = 12 * 60;
 
 const defaultSettings = {
   dailyTargetMinutes: 8 * 60,
+  workingDaysPerWeek: 5 as const,
   theme: 'system' as const,
   gapReminderMinutes: 60,
   backupDir: null as string | null,
   autoStart: false,
+  trayEnabled: true,
+  hotkeyEnabled: true,
 };
 
 function timestamp() {
@@ -252,10 +258,13 @@ function ensureDefaultSettings(db: Database.Database) {
 
   const defaults: Record<string, string> = {
     daily_target_minutes: String(defaultSettings.dailyTargetMinutes),
+    working_days_per_week: String(defaultSettings.workingDaysPerWeek),
     theme: defaultSettings.theme,
     gap_reminder_minutes: String(defaultSettings.gapReminderMinutes),
     backup_dir: '',
     auto_start: defaultSettings.autoStart ? '1' : '0',
+    tray_enabled: defaultSettings.trayEnabled ? '1' : '0',
+    hotkey_enabled: defaultSettings.hotkeyEnabled ? '1' : '0',
   };
 
   Object.entries(defaults).forEach(([key, value]) => {
@@ -794,10 +803,13 @@ export function getSettings(db: Database.Database): AppSettings {
 
   return {
     dailyTargetMinutes: Number(map.get('daily_target_minutes') ?? defaultSettings.dailyTargetMinutes),
+    workingDaysPerWeek: Number(map.get('working_days_per_week') ?? defaultSettings.workingDaysPerWeek) as 5 | 6 | 7,
     theme: (map.get('theme') as AppSettings['theme']) ?? defaultSettings.theme,
     gapReminderMinutes: Number(map.get('gap_reminder_minutes') ?? defaultSettings.gapReminderMinutes),
     backupDir: map.get('backup_dir') ? (map.get('backup_dir') as string) : null,
     autoStart: (map.get('auto_start') ?? '0') === '1',
+    trayEnabled: (map.get('tray_enabled') ?? '1') === '1',
+    hotkeyEnabled: (map.get('hotkey_enabled') ?? '1') === '1',
   };
 }
 
@@ -805,18 +817,24 @@ export function setSettings(db: Database.Database, partial: Partial<AppSettings>
   const existing = getSettings(db);
   const merged: AppSettings = {
     dailyTargetMinutes: partial.dailyTargetMinutes ?? existing.dailyTargetMinutes,
+    workingDaysPerWeek: partial.workingDaysPerWeek ?? existing.workingDaysPerWeek,
     theme: partial.theme ?? existing.theme,
     gapReminderMinutes: partial.gapReminderMinutes ?? existing.gapReminderMinutes,
     backupDir: partial.backupDir ?? existing.backupDir,
     autoStart: partial.autoStart ?? existing.autoStart,
+    trayEnabled: partial.trayEnabled ?? existing.trayEnabled,
+    hotkeyEnabled: partial.hotkeyEnabled ?? existing.hotkeyEnabled,
   };
 
   const update = db.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
   update.run('daily_target_minutes', String(merged.dailyTargetMinutes));
+  update.run('working_days_per_week', String(merged.workingDaysPerWeek));
   update.run('theme', merged.theme);
   update.run('gap_reminder_minutes', String(merged.gapReminderMinutes));
   update.run('backup_dir', merged.backupDir ?? '');
   update.run('auto_start', merged.autoStart ? '1' : '0');
+  update.run('tray_enabled', merged.trayEnabled ? '1' : '0');
+  update.run('hotkey_enabled', merged.hotkeyEnabled ? '1' : '0');
 
   return merged;
 }

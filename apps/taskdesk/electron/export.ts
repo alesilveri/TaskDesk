@@ -26,6 +26,19 @@ function getMonthlyRows(db: Database.Database, month: string) {
     .all(`${month}-%`) as ExportRow[];
 }
 
+function getRowsByRange(db: Database.Database, startDate: string, endDate: string) {
+  return db
+    .prepare(
+      `SELECT a.date as date, c.name as client, a.title as title, a.description as description,
+        a.minutes as minutes, a.reference_verbale as reference, a.resource_icon as resource, a.in_gestore as inGestore, a.verbale_done as verbale
+      FROM activities a
+      LEFT JOIN clients c ON a.client_id = c.id
+      WHERE a.date BETWEEN ? AND ?
+      ORDER BY a.date ASC`
+    )
+    .all(startDate, endDate) as ExportRow[];
+}
+
 function buildGestoreCopy(rows: ExportRow[]) {
   const header = ['Data', 'Cliente', 'Titolo', 'Minuti', 'Rif Verbale', 'ICON'];
   const lines = rows.map((row) =>
@@ -153,5 +166,10 @@ export async function exportMonthlyXlsx(db: Database.Database, month: string, ta
 }
 export function exportMonthlyCopy(db: Database.Database, month: string) {
   const rows = getMonthlyRows(db, month);
+  return buildGestoreCopy(rows);
+}
+
+export function exportWeeklyCopy(db: Database.Database, startDate: string, endDate: string) {
+  const rows = getRowsByRange(db, startDate, endDate);
   return buildGestoreCopy(rows);
 }

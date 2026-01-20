@@ -1,17 +1,23 @@
-import { eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, isWeekend, startOfMonth, startOfWeek } from 'date-fns';
+import { eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek } from 'date-fns';
+import { isWorkingDay } from './time';
 
 export type MonthDay = {
   date: string;
   label: string;
   isCurrentMonth: boolean;
-  isWeekend: boolean;
+  isWorkingDay: boolean;
   isToday: boolean;
   totalMinutes: number;
   totalEntries: number;
   gapMinutes: number;
 };
 
-export function buildMonthGrid(monthKey: string, rows: { date: string; totalMinutes: number; totalEntries: number }[], targetMinutes: number) {
+export function buildMonthGrid(
+  monthKey: string,
+  rows: { date: string; totalMinutes: number; totalEntries: number }[],
+  targetMinutes: number,
+  workingDaysPerWeek = 5
+) {
   const base = new Date(`${monthKey}-01T00:00:00`);
   const start = startOfWeek(startOfMonth(base), { weekStartsOn: 1 });
   const end = endOfWeek(endOfMonth(base), { weekStartsOn: 1 });
@@ -26,7 +32,7 @@ export function buildMonthGrid(monthKey: string, rows: { date: string; totalMinu
       date: key,
       label: format(day, 'd'),
       isCurrentMonth: isSameMonth(day, base),
-      isWeekend: isWeekend(day),
+      isWorkingDay: isWorkingDay(day, workingDaysPerWeek),
       isToday: isSameDay(day, today),
       totalMinutes,
       totalEntries: summary?.totalEntries ?? 0,

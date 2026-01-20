@@ -32,6 +32,7 @@ const api = {
   exports: {
     monthly: (month: string) => ipcRenderer.invoke('exports:monthly', month),
     monthlyCopy: (month: string) => ipcRenderer.invoke('exports:monthlyCopy', month),
+    weeklyCopy: (startDate: string, endDate: string) => ipcRenderer.invoke('exports:weeklyCopy', startDate, endDate),
   },
   backup: {
     create: (targetDir?: string) => ipcRenderer.invoke('backup:create', targetDir),

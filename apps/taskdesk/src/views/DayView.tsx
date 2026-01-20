@@ -58,6 +58,7 @@ export default function DayView({
   const [inlineEditId, setInlineEditId] = useState<string | null>(null);
   const [inlineEdit, setInlineEdit] = useState<InlineEditState | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const [compact, setCompact] = useState(true);
 
   const totalMinutes = activities.reduce((sum, activity) => sum + activity.minutes, 0);
   const gapMinutes = Math.max(targetMinutes - totalMinutes, 0);
@@ -156,7 +157,7 @@ export default function DayView({
     }
   }
 
-  const dayRowSize = 170;
+  const dayRowSize = compact ? 150 : 190;
   const dayListHeight = Math.min(520, Math.max(240, filteredActivities.length * dayRowSize));
 
   return (
@@ -302,7 +303,23 @@ export default function DayView({
       )}
 
       <div className="rounded-xl border border-ink/10 bg-surface">
-        <div className="border-b border-ink/10 px-4 py-3 text-sm font-semibold">Attivita del giorno</div>
+        <div className="flex items-center justify-between border-b border-ink/10 px-4 py-3 text-sm font-semibold">
+          <span>Attivita del giorno</span>
+          <div className="flex items-center gap-2 text-xs">
+            <button
+              className={`rounded-full px-3 py-1 ${compact ? 'bg-ink text-white' : 'bg-ink/5'}`}
+              onClick={() => setCompact(true)}
+            >
+              Compact
+            </button>
+            <button
+              className={`rounded-full px-3 py-1 ${!compact ? 'bg-ink text-white' : 'bg-ink/5'}`}
+              onClick={() => setCompact(false)}
+            >
+              Comfort
+            </button>
+          </div>
+        </div>
         {filteredActivities.length > 0 ? (
           <List height={dayListHeight} itemCount={filteredActivities.length} itemSize={dayRowSize} width="100%">
             {({ index, style }) => {

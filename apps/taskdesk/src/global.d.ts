@@ -53,6 +53,7 @@ declare global {
       exports: {
         monthly: (month: string) => Promise<string | null>;
         monthlyCopy: (month: string) => Promise<string>;
+        weeklyCopy: (startDate: string, endDate: string) => Promise<string>;
       };
       backup: {
         create: (targetDir?: string) => Promise<string>;

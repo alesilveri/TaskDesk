@@ -95,10 +95,13 @@ export type ActivityHistory = {
 
 export type AppSettings = {
   dailyTargetMinutes: number;
+  workingDaysPerWeek: 5 | 6 | 7;
   theme: 'light' | 'dark' | 'system';
   gapReminderMinutes: number;
   backupDir: string | null;
   autoStart: boolean;
+  trayEnabled: boolean;
+  hotkeyEnabled: boolean;
 };
 
 export type SummaryByDate = {

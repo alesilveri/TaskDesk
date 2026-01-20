@@ -7,15 +7,22 @@ export const MINUTE_SUGGESTIONS = [15, 20, 30, 45];
 export const SMART_SLOT_CANDIDATES = [10, 15, 20, 25];
 export const HIGH_DURATION_WARNING_MINUTES = 240;
 
+export function isWorkingDay(date: Date, workingDaysPerWeek = 5) {
+  const day = date.getDay();
+  if (workingDaysPerWeek >= 7) return true;
+  if (workingDaysPerWeek === 6) return day !== 0;
+  return day !== 0 && day !== 6;
+}
+
 export function formatMinutes(total: number) {
   const hours = Math.floor(total / 60);
   const minutes = total % 60;
   return `${hours}h ${minutes}m`;
 }
 
-export function countWorkingDays(start: string, end: string) {
+export function countWorkingDays(start: string, end: string, workingDaysPerWeek = 5) {
   const days = eachDayOfInterval({ start: parseISO(start), end: parseISO(end) });
-  return days.filter((day) => !isWeekend(day)).length;
+  return days.filter((day) => isWorkingDay(day, workingDaysPerWeek)).length;
 }
 
 export function buildSmartSlots(gapMinutes: number, patterns: number[]) {

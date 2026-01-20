@@ -20,6 +20,9 @@ export function validateActivityInput(input: ActivityInput) {
 
 export function getActivityWarnings(input: ActivityInput, targetMinutes: number) {
   const warnings: string[] = [];
+  if (input.title && input.title.trim().length > 0 && input.title.trim().length < 4) {
+    warnings.push('Titolo molto breve: valuta un titolo piu specifico.');
+  }
   if (input.minutes >= HIGH_DURATION_WARNING_MINUTES) {
     warnings.push('Durata elevata: verifica che sia credibile.');
   }

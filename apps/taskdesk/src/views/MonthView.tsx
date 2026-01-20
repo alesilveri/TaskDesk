@@ -6,6 +6,7 @@ type MonthViewProps = {
   monthKey: string;
   monthRange: { start: string; end: string; label: string };
   targetMinutes: number;
+  workingDaysPerWeek: 5 | 6 | 7;
   monthTargetMinutes: number;
   monthGapMinutes: number;
   monthProgress: number;
@@ -18,6 +19,9 @@ type MonthViewProps = {
   monthlySummary: MonthlySummary | null;
   onExportMonth: () => void;
   onCopyGestore: () => void;
+  onSelectDate: (date: string) => void;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
 };
 
 function heatColor(totalMinutes: number, targetMinutes: number) {
@@ -31,6 +35,7 @@ export default function MonthView({
   monthKey,
   monthRange,
   targetMinutes,
+  workingDaysPerWeek,
   monthTargetMinutes,
   monthGapMinutes,
   monthProgress,
@@ -43,9 +48,12 @@ export default function MonthView({
   monthlySummary,
   onExportMonth,
   onCopyGestore,
+  onSelectDate,
+  onPrevMonth,
+  onNextMonth,
 }: MonthViewProps) {
   const monthHasData = (monthlySummary?.totalEntries ?? 0) > 0;
-  const monthWeeks = buildMonthGrid(monthKey, monthDailyRows, targetMinutes);
+  const monthWeeks = buildMonthGrid(monthKey, monthDailyRows, targetMinutes, workingDaysPerWeek);
 
   return (
     <section className="mt-8 space-y-6">
@@ -93,7 +101,17 @@ export default function MonthView({
 
       <div className="grid gap-4 lg:grid-cols-4">
         <div className="rounded-xl border border-ink/10 bg-surface p-4 lg:col-span-2">
-          <div className="text-xs uppercase text-ink/50">Calendario mese</div>
+          <div className="flex items-center justify-between text-xs text-ink/60">
+            <span className="uppercase">Calendario mese</span>
+            <div className="flex items-center gap-2">
+              <button className="rounded-lg border border-ink/10 px-2 py-1" onClick={onPrevMonth}>
+                Prev
+              </button>
+              <button className="rounded-lg border border-ink/10 px-2 py-1" onClick={onNextMonth}>
+                Next
+              </button>
+            </div>
+          </div>
           <div className="mt-4 grid grid-cols-7 gap-2 text-xs text-ink/60">
             {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map((label) => (
               <div key={label} className="text-center font-semibold">
@@ -103,23 +121,24 @@ export default function MonthView({
           </div>
           <div className="mt-2 grid grid-cols-7 gap-2">
             {monthWeeks.flat().map((day) => {
-              const isMissing = day.totalMinutes === 0 && !day.isWeekend && day.isCurrentMonth;
+              const isMissing = day.totalMinutes === 0 && day.isWorkingDay && day.isCurrentMonth;
               const baseStyle = day.isCurrentMonth ? heatColor(day.totalMinutes, targetMinutes) : 'rgb(var(--color-ink) / 0.03)';
               return (
-                <div
+                <button
                   key={day.date}
                   className={`rounded-lg border px-2 py-2 text-xs ${
                     day.isCurrentMonth ? 'border-ink/10' : 'border-transparent text-ink/30'
                   } ${isMissing ? 'border-amber/60' : ''} ${day.isToday ? 'ring-2 ring-teal/60' : ''}`}
                   style={{ backgroundColor: baseStyle }}
                   title={`${day.date} - ${formatMinutes(day.totalMinutes)} (${day.totalEntries} voci)`}
+                  onClick={() => onSelectDate(day.date)}
                 >
                   <div className="flex items-center justify-between text-ink/70">
-                    <span className={day.isWeekend ? 'text-ink/40' : ''}>{day.label}</span>
+                    <span className={!day.isWorkingDay ? 'text-ink/40' : ''}>{day.label}</span>
                     {isMissing && <span className="text-amber">!</span>}
                   </div>
                   <div className="mt-2 text-[11px] text-ink/60">{day.totalMinutes ? formatMinutes(day.totalMinutes) : '--'}</div>
-                </div>
+                </button>
               );
             })}
           </div>

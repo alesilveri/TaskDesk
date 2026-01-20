@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { addDays, eachDayOfInterval, endOfISOWeek, endOfMonth, format, isWeekend, parseISO, startOfISOWeek, startOfMonth } from 'date-fns';
+import {
+  addDays,
+  addMonths,
+  eachDayOfInterval,
+  endOfISOWeek,
+  endOfMonth,
+  format,
+  parseISO,
+  startOfISOWeek,
+  startOfMonth,
+} from 'date-fns';
 import type {
   Activity,
   ActivityHistory,
@@ -21,13 +31,14 @@ import ClientsView from './views/ClientsView';
 import SettingsView from './views/SettingsView';
 import CommandPalette, { type CommandAction } from './components/CommandPalette';
 import QuickAddModal from './components/QuickAddModal';
-import { countWorkingDays, DEFAULT_TARGET_MINUTES, formatMinutes } from './utils/time';
+import { countWorkingDays, DEFAULT_TARGET_MINUTES, formatMinutes, isWorkingDay } from './utils/time';
 import { getActivityWarnings, validateActivityInput } from './utils/validation';
+import { getRomeDateString } from './utils/date';
 
 type View = 'day' | 'week' | 'month' | 'search' | 'clients' | 'settings';
 
 const emptyInput: ActivityInput = {
-  date: format(new Date(), 'yyyy-MM-dd'),
+  date: getRomeDateString(),
   title: '',
   minutes: 30,
   status: 'bozza',
@@ -52,7 +63,7 @@ function isEditableTarget(target: EventTarget | null) {
 
 export default function App() {
   const [view, setView] = useState<View>('day');
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedDate, setSelectedDate] = useState(getRomeDateString());
   const [activities, setActivities] = useState<Activity[]>([]);
   const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
   const [weeklySummary, setWeeklySummary] = useState<WeeklySummary | null>(null);
@@ -71,6 +82,7 @@ export default function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   const targetMinutes = settings?.dailyTargetMinutes ?? DEFAULT_TARGET_MINUTES;
+  const workingDaysPerWeek = settings?.workingDaysPerWeek ?? 5;
 
   const weekRange = useMemo(() => {
     const date = new Date(selectedDate);
@@ -97,14 +109,14 @@ export default function App() {
   }, [monthKey]);
 
   const weekTargetMinutes = useMemo(
-    () => countWorkingDays(weekRange.start, weekRange.end) * targetMinutes,
-    [weekRange.start, weekRange.end, targetMinutes]
+    () => workingDaysPerWeek * targetMinutes,
+    [workingDaysPerWeek, targetMinutes]
   );
   const weekGapMinutes = Math.max(weekTargetMinutes - (weeklySummary?.totalMinutes ?? 0), 0);
 
   const monthTargetMinutes = useMemo(
-    () => countWorkingDays(monthRange.start, monthRange.end) * targetMinutes,
-    [monthRange.start, monthRange.end, targetMinutes]
+    () => countWorkingDays(monthRange.start, monthRange.end, workingDaysPerWeek) * targetMinutes,
+    [monthRange.start, monthRange.end, targetMinutes, workingDaysPerWeek]
   );
   const monthGapMinutes = Math.max(monthTargetMinutes - (monthlySummary?.totalMinutes ?? 0), 0);
 
@@ -161,8 +173,8 @@ export default function App() {
   }, [monthDailyRows]);
 
   const monthWorkingDaysMissing = useMemo(() => {
-    return monthDailyRows.filter((row) => row.totalMinutes === 0 && !isWeekend(parseISO(row.date))).length;
-  }, [monthDailyRows]);
+    return monthDailyRows.filter((row) => row.totalMinutes === 0 && isWorkingDay(parseISO(row.date), workingDaysPerWeek)).length;
+  }, [monthDailyRows, workingDaysPerWeek]);
 
   const monthSuggestedDaily = useMemo(() => {
     if (monthWorkingDaysMissing === 0) return 0;
@@ -176,6 +188,21 @@ export default function App() {
     { id: 'search', label: 'Vai a Ricerca', shortcut: 'Ctrl+4', onSelect: () => setView('search') },
     { id: 'clients', label: 'Vai a Clienti', shortcut: 'Ctrl+5', onSelect: () => setView('clients') },
     { id: 'settings', label: 'Vai a Impostazioni', shortcut: 'Ctrl+6', onSelect: () => setView('settings') },
+    { id: 'theme-light', label: 'Tema Light', onSelect: () => handleThemeChange('light') },
+    { id: 'theme-dark', label: 'Tema Dark', onSelect: () => handleThemeChange('dark') },
+    { id: 'theme-system', label: 'Tema System', onSelect: () => handleThemeChange('system') },
+    {
+      id: 'month-prev',
+      label: 'Mese precedente',
+      shortcut: 'Ctrl+Alt+←',
+      onSelect: () => setSelectedDate(format(addMonths(new Date(selectedDate), -1), 'yyyy-MM-dd')),
+    },
+    {
+      id: 'month-next',
+      label: 'Mese successivo',
+      shortcut: 'Ctrl+Alt+→',
+      onSelect: () => setSelectedDate(format(addMonths(new Date(selectedDate), 1), 'yyyy-MM-dd')),
+    },
     {
       id: 'quick-add',
       label: 'Nuova attivita',
@@ -264,6 +291,16 @@ export default function App() {
         event.preventDefault();
         setPaletteOpen(true);
         return;
+      }
+      if ((event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey) {
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          setSelectedDate(format(addMonths(new Date(selectedDate), -1), 'yyyy-MM-dd'));
+        }
+        if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          setSelectedDate(format(addMonths(new Date(selectedDate), 1), 'yyyy-MM-dd'));
+        }
       }
       if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey) {
         if (event.key === '1') setView('day');
@@ -478,6 +515,24 @@ export default function App() {
     window.api.system.notify({ title: 'Copia completata', body: 'Formato Gestore copiato negli appunti.' });
   }
 
+  async function handleCopyWeek() {
+    const text = await window.api.exports.weeklyCopy(weekRange.start, weekRange.end);
+    if (!text) return;
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    window.api.system.notify({ title: 'Copia completata', body: 'Formato Gestore settimanale copiato negli appunti.' });
+  }
+
   async function handleBackup() {
     const backupPath = await window.api.backup.create();
     loadBackups();
@@ -570,26 +625,60 @@ export default function App() {
               <p className="mt-1 text-sm text-ink/50">{selectedDate}</p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                className="rounded-lg border border-ink/10 px-3 py-2 text-sm"
-                onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), -1), 'yyyy-MM-dd'))}
-              >
-                Ieri
-              </button>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(event) => setSelectedDate(event.target.value)}
-                className="rounded-lg border border-ink/10 px-3 py-2 text-sm"
-              />
-              <button
-                className="rounded-lg border border-ink/10 px-3 py-2 text-sm"
-                onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), 1), 'yyyy-MM-dd'))}
-              >
-                Domani
-              </button>
-            </div>
+            {view === 'day' && (
+              <div className="flex items-center gap-3">
+                <button
+                  className="rounded-lg border border-ink/10 px-3 py-2 text-sm"
+                  onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), -1), 'yyyy-MM-dd'))}
+                >
+                  Ieri
+                </button>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(event) => setSelectedDate(event.target.value)}
+                  className="rounded-lg border border-ink/10 px-3 py-2 text-sm"
+                />
+                <button
+                  className="rounded-lg border border-ink/10 px-3 py-2 text-sm"
+                  onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), 1), 'yyyy-MM-dd'))}
+                >
+                  Domani
+                </button>
+              </div>
+            )}
+            {view === 'week' && (
+              <div className="flex items-center gap-3">
+                <button
+                  className="rounded-lg border border-ink/10 px-3 py-2 text-sm"
+                  onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), -7), 'yyyy-MM-dd'))}
+                >
+                  Settimana prec
+                </button>
+                <button
+                  className="rounded-lg border border-ink/10 px-3 py-2 text-sm"
+                  onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), 7), 'yyyy-MM-dd'))}
+                >
+                  Settimana succ
+                </button>
+              </div>
+            )}
+            {view === 'month' && (
+              <div className="flex items-center gap-3">
+                <button
+                  className="rounded-lg border border-ink/10 px-3 py-2 text-sm"
+                  onClick={() => setSelectedDate(format(addMonths(new Date(selectedDate), -1), 'yyyy-MM-dd'))}
+                >
+                  Mese prec
+                </button>
+                <button
+                  className="rounded-lg border border-ink/10 px-3 py-2 text-sm"
+                  onClick={() => setSelectedDate(format(addMonths(new Date(selectedDate), 1), 'yyyy-MM-dd'))}
+                >
+                  Mese succ
+                </button>
+              </div>
+            )}
           </header>
 
           {view === 'day' && (
@@ -615,6 +704,7 @@ export default function App() {
               weekTargetMinutes={weekTargetMinutes}
               weekGapMinutes={weekGapMinutes}
               weeklySummary={weeklySummary}
+              onCopyWeek={handleCopyWeek}
               weekDailyRows={weekDailyRows}
             />
           )}
@@ -624,6 +714,7 @@ export default function App() {
               monthKey={monthKey}
               monthRange={monthRange}
               targetMinutes={targetMinutes}
+              workingDaysPerWeek={workingDaysPerWeek}
               monthTargetMinutes={monthTargetMinutes}
               monthGapMinutes={monthGapMinutes}
               monthProgress={monthProgress}
@@ -636,6 +727,12 @@ export default function App() {
               monthlySummary={monthlySummary}
               onExportMonth={handleExportMonth}
               onCopyGestore={handleCopyGestore}
+              onSelectDate={(date) => {
+                setSelectedDate(date);
+                setView('day');
+              }}
+              onPrevMonth={() => setSelectedDate(format(addMonths(new Date(selectedDate), -1), 'yyyy-MM-dd'))}
+              onNextMonth={() => setSelectedDate(format(addMonths(new Date(selectedDate), 1), 'yyyy-MM-dd'))}
             />
           )}
 
@@ -649,6 +746,8 @@ export default function App() {
             <SettingsView
               settings={settings}
               targetMinutes={targetMinutes}
+              weekTargetMinutes={weekTargetMinutes}
+              workingDaysPerWeek={workingDaysPerWeek}
               templates={templates}
               backups={backups}
               onTemplateApply={handleTemplateApply}

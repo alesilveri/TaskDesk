@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Activity, ActivityStatus } from '../types';
 
 type SearchFilters = {
@@ -24,10 +24,31 @@ type SearchViewProps = {
   onDelete: (id: string) => void;
 };
 
+type SavedFilter = {
+  id: string;
+  name: string;
+  filters: SearchFilters;
+};
+
+const storageKey = 'taskdesk.search.presets';
+
 export default function SearchView({ onOpenEdit, onDelete }: SearchViewProps) {
   const [filters, setFilters] = useState<SearchFilters>({ ...defaultSearchFilters });
   const [results, setResults] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
+  const [presetName, setPresetName] = useState('');
+  const [presets, setPresets] = useState<SavedFilter[]>([]);
+
+  const hasActiveFilters = useMemo(() => {
+    return (
+      filters.text ||
+      filters.client ||
+      filters.status !== 'all' ||
+      filters.startDate ||
+      filters.endDate ||
+      filters.onlyNotInserted
+    );
+  }, [filters]);
 
   useEffect(() => {
     window.api.ui.onResetFilters(() => {
@@ -35,6 +56,45 @@ export default function SearchView({ onOpenEdit, onDelete }: SearchViewProps) {
       setResults([]);
     });
   }, []);
+
+  useEffect(() => {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as SavedFilter[];
+      setPresets(parsed);
+    } catch {
+      setPresets([]);
+    }
+  }, []);
+
+  function savePresets(next: SavedFilter[]) {
+    setPresets(next);
+    window.localStorage.setItem(storageKey, JSON.stringify(next));
+  }
+
+  function handleSavePreset() {
+    if (!presetName.trim()) return;
+    const next: SavedFilter[] = [
+      ...presets,
+      {
+        id: `${Date.now()}`,
+        name: presetName.trim(),
+        filters,
+      },
+    ];
+    savePresets(next);
+    setPresetName('');
+  }
+
+  function handleApplyPreset(preset: SavedFilter) {
+    setFilters(preset.filters);
+    setResults([]);
+  }
+
+  function handleDeletePreset(id: string) {
+    savePresets(presets.filter((preset) => preset.id !== id));
+  }
 
   async function handleSearch() {
     setLoading(true);
@@ -126,9 +186,49 @@ export default function SearchView({ onOpenEdit, onDelete }: SearchViewProps) {
           >
             Reset
           </button>
+          <button
+            className="rounded-lg border border-ink/10 px-4 py-2 text-xs"
+            disabled={!hasActiveFilters}
+            onClick={() => setPresetName('Filtro salvato')}
+          >
+            Salva filtro
+          </button>
           {loading && <span className="text-xs text-ink/50">Ricerca in corso...</span>}
         </div>
+        {presetName && (
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+            <input
+              type="text"
+              value={presetName}
+              onChange={(event) => setPresetName(event.target.value)}
+              className="rounded-lg border border-ink/10 px-3 py-2"
+              placeholder="Nome filtro"
+            />
+            <button className="rounded-lg bg-ink px-3 py-2 text-white" onClick={handleSavePreset}>
+              Salva
+            </button>
+            <button className="rounded-lg border border-ink/10 px-3 py-2" onClick={() => setPresetName('')}>
+              Annulla
+            </button>
+          </div>
+        )}
       </div>
+
+      {presets.length > 0 && (
+        <div className="rounded-xl border border-ink/10 bg-surface p-4">
+          <div className="text-sm font-semibold">Filtri salvati</div>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            {presets.map((preset) => (
+              <div key={preset.id} className="flex items-center gap-2 rounded-full bg-ink/5 px-3 py-1">
+                <button onClick={() => handleApplyPreset(preset)}>{preset.name}</button>
+                <button className="text-ink/40" onClick={() => handleDeletePreset(preset.id)}>
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="rounded-xl border border-ink/10 bg-surface">
         <div className="border-b border-ink/10 px-4 py-3 text-sm font-semibold">Risultati ({results.length})</div>

@@ -24,7 +24,7 @@ import {
   deleteTemplate,
   useTemplate,
 } from './db';
-import { exportMonthlyXlsx, exportMonthlyCopy } from './export';
+import { exportMonthlyXlsx, exportMonthlyCopy, exportWeeklyCopy } from './export';
 import { createBackup, listBackups, restoreBackup } from './backup';
 import { inspectCsv, importClientsFromCsv } from './csv';
 
@@ -162,12 +162,33 @@ function createTray() {
       click: () => sendToRenderer('ui:navigate', 'day'),
     },
     {
+      label: 'Apri settimana',
+      click: () => sendToRenderer('ui:navigate', 'week'),
+    },
+    {
+      label: 'Apri mese',
+      click: () => sendToRenderer('ui:navigate', 'month'),
+    },
+    {
       label: 'Nuova attivita',
       click: () => sendToRenderer('ui:quick-add'),
     },
     {
       label: 'Export mese',
       click: () => sendToRenderer('ui:export'),
+    },
+    {
+      label: 'Crea backup',
+      click: () => {
+        try {
+          createBackup(resolveBackupDir());
+          if (Notification.isSupported()) {
+            new Notification({ title: 'Backup creato', body: 'Backup salvato con successo.' }).show();
+          }
+        } catch (error) {
+          console.warn('[taskdesk:backup] tray backup failed', error);
+        }
+      },
     },
     { type: 'separator' },
     {
@@ -291,6 +312,23 @@ function createAppMenu() {
   Menu.setApplicationMenu(menu);
 }
 
+function applyTraySetting(enabled: boolean) {
+  if (enabled) {
+    if (!tray) createTray();
+  } else if (tray) {
+    tray.destroy();
+    tray = null;
+  }
+}
+
+function applyHotkeySetting(enabled: boolean) {
+  globalShortcut.unregisterAll();
+  if (!enabled) return;
+  globalShortcut.register('CommandOrControl+Shift+N', () => {
+    sendToRenderer('ui:quick-add');
+  });
+}
+
 function handleCheckForUpdates() {
   if (!app.isPackaged) {
     dialog.showMessageBox({
@@ -338,12 +376,6 @@ function setupAutoUpdater() {
   autoUpdater.checkForUpdatesAndNotify();
 }
 
-function registerShortcuts() {
-  globalShortcut.register('CommandOrControl+Shift+N', () => {
-    sendToRenderer('ui:quick-add');
-  });
-}
-
 function registerIpc() {
   ipcMain.handle('activities:list', (_event, date: string) => listActivitiesByDate(db, date));
   ipcMain.handle('activities:search', (_event, filters) => searchActivities(db, filters));
@@ -379,6 +411,7 @@ function registerIpc() {
     return exportMonthlyXlsx(db, month, filePath);
   });
   ipcMain.handle('exports:monthlyCopy', (_event, month: string) => exportMonthlyCopy(db, month));
+  ipcMain.handle('exports:weeklyCopy', (_event, startDate: string, endDate: string) => exportWeeklyCopy(db, startDate, endDate));
 
   ipcMain.handle('backup:create', (_event, targetDir?: string) => createBackup(targetDir ?? resolveBackupDir()));
   ipcMain.handle('backup:list', () => listBackups(resolveBackupDir()));
@@ -422,6 +455,12 @@ function registerIpc() {
     if (typeof partial?.autoStart === 'boolean') {
       applyAutoStartSetting(updated.autoStart);
     }
+    if (typeof partial?.trayEnabled === 'boolean') {
+      applyTraySetting(updated.trayEnabled);
+    }
+    if (typeof partial?.hotkeyEnabled === 'boolean') {
+      applyHotkeySetting(updated.hotkeyEnabled);
+    }
     return updated;
   });
 
@@ -456,11 +495,12 @@ app.on('second-instance', () => {
 app.whenReady().then(() => {
   app.setAppUserModelId('com.taskdesk.app');
   db = openDb();
-  applyAutoStartSetting(getSettings(db).autoStart);
+  const currentSettings = getSettings(db);
+  applyAutoStartSetting(currentSettings.autoStart);
   createMainWindow();
-  createTray();
+  applyTraySetting(currentSettings.trayEnabled);
   createAppMenu();
-  registerShortcuts();
+  applyHotkeySetting(currentSettings.hotkeyEnabled);
   registerIpc();
   scheduleGapReminder();
   setupAutoUpdater();

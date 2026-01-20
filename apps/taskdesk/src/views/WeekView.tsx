@@ -6,6 +6,7 @@ type WeekViewProps = {
   weekTargetMinutes: number;
   weekGapMinutes: number;
   weeklySummary: WeeklySummary | null;
+  onCopyWeek: () => void;
   weekDailyRows: {
     date: string;
     label: string;
@@ -20,6 +21,7 @@ export default function WeekView({
   weekTargetMinutes,
   weekGapMinutes,
   weeklySummary,
+  onCopyWeek,
   weekDailyRows,
 }: WeekViewProps) {
   return (
@@ -41,6 +43,9 @@ export default function WeekView({
           <div className="text-xs uppercase text-ink/50">Gap settimana</div>
           <div className="mt-2 text-2xl font-semibold text-amber">{formatMinutes(weekGapMinutes)}</div>
           <div className="mt-2 text-xs text-ink/50">Smart gap rispetto target</div>
+          <button className="mt-4 rounded-lg border border-ink/10 px-3 py-2 text-xs" onClick={onCopyWeek}>
+            Copia formato Gestore
+          </button>
         </div>
       </div>
 
