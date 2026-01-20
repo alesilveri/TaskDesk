@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        node: [20, 22]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+          cache-dependency-path: apps/taskdesk/package-lock.json
+
+      - name: Install
+        working-directory: apps/taskdesk
+        run: npm ci
+
+      - name: Lint
+        working-directory: apps/taskdesk
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: apps/taskdesk
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: apps/taskdesk
+        run: npm test
+
+      - name: Build renderer
+        working-directory: apps/taskdesk
+        run: npm run build:renderer
+
+      - name: Build electron
+        working-directory: apps/taskdesk
+        run: npm run build:electron
