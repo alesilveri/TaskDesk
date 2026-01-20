@@ -10,7 +10,7 @@
     "Moved dev docs to docs/dev and refreshed README",
     "Engine-strict enforcement for Node LTS",
     "Installed local Node 22 runtime and validated npm ci/dev/build/test/smoke",
-    "Project cleanup: removed build artifacts and moved legacy references"
+    "Project cleanup: removed build artifacts, removed unused assets, removed legacy references"
   ],
   "remaining": [
     "Replace screenshot placeholder with a real capture",

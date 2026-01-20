@@ -6,7 +6,6 @@
 - `docs/` (audit, decisions, prompt)
 - `assets/` (branding)
 - `.github/` (workflow + template)
-- `docs/dev/legacy/references/` (solo reference utili e leggere)
 - `.gitignore`, `README.md`, `CHANGELOG.md`, `PRIVACY.md`, `LICENSE`
 
 ## ARCHIVE
