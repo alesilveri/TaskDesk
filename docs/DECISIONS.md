@@ -1,5 +1,70 @@
 # Technical Decisions
 
+Date: 2026-01-20
+
+## Decision
+Aggiornare toolchain dev per chiudere vulnerabilita note (Electron >=35.7.5, Vite 7, Vitest 4).
+
+## Context
+`npm audit` segnala advisory su Electron (<35.7.5) ed esbuild (usato da Vite/Vitest). Serve restare su LTS ma con patch di sicurezza.
+
+## Rationale
+- Upgrade mirato di Electron per correggere la vulnerabilita ASAR integrity bypass.
+- Upgrade di Vite/Vitest per recepire le patch di esbuild.
+- Manteniamo Node LTS 20/22 e `engine-strict` per evitare rebuild nativi su Node 24.
+
+## Evidence (links)
+- Electron security advisory: https://github.com/advisories/GHSA-vmqv-hx8q-j7mg
+- esbuild advisory: https://github.com/advisories/GHSA-67mh-4wv8-2f99
+
+---
+
+## Decision
+Smoke test automatico: DB temporaneo + export XLSX reale.
+
+## Context
+Lo smoke manuale non garantiva che l'export funzionasse davvero.
+
+## Rationale
+- Verifica end-to-end dell'export senza avviare l'app completa.
+- Riduce regressioni su ExcelJS/export.
+
+---
+
+## Decision
+Backup retention 7 giornalieri / 4 settimanali / 6 mensili + safety backup prima del restore.
+
+## Context
+Backup semplice a rotazione fissa (10) non garantiva copertura temporale.
+
+## Rationale
+- Copertura breve + lunga senza crescite infinite.
+- Restore sicuro: si salva prima lo stato corrente.
+
+---
+
+## Decision
+CI minima con Node LTS e setup-node + dependabot per npm/github-actions.
+
+## Context
+Pipeline assente su PR/push; rischio regressioni.
+
+## Evidence (links)
+- GitHub setup-node: https://github.com/marketplace/actions/setup-node-js-environment
+- Dependabot config: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+---
+
+## Decision
+Repo idonea a essere pubblica (scan segreti ok).
+
+## Context
+Richiesta di rendere la repo “vetrina” ma senza dati sensibili.
+
+## Rationale
+- Scansione rapida su token/chiavi comuni non ha trovato segreti.
+- Nessun dato cliente reale nei file tracciati.
+
 Date: 2026-01-14
 
 ## Decision

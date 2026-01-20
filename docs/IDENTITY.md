@@ -43,3 +43,10 @@ Dark:
 ## Icon idea
 - Squircle with a subtle grid and a check/desk line, to convey task + desk + precision.
 
+## Social preview (GitHub)
+1. Usa `assets/social-preview.png` (1280x640).
+2. GitHub repo → Settings → Social preview.
+3. Carica l'immagine e salva.
+4. Aggiorna se cambia banner/screenshot.
+5. Evita dati reali o clienti reali.
+

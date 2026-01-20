@@ -46,3 +46,32 @@ Link: https://super-productivity.com/use-cases/time-tracker/
 Link: (non pubblico)
 - Import CSV clienti come onboarding rapido.
 - Pattern: codici cliente e flag (es. canone attivo) utili per filtri/report.
+
+---
+
+## Repo README references (struttura + visual)
+
+## ActivityWatch (repo)
+Link: https://github.com/ActivityWatch/activitywatch
+- README con screenshot e overview chiara.
+- Pattern: sezione download immediata + feature essenziali.
+
+## Responsively App
+Link: https://github.com/responsively-org/responsively-app
+- README con hero + badges + download.
+- Pattern: CTA chiari e link diretti ai binari.
+
+## Notable
+Link: https://github.com/notable/notable
+- README user-first e minimalista.
+- Pattern: focus su cosa fa e come si usa subito.
+
+## Kap
+Link: https://github.com/wulkano/kap
+- README con screenshot e sezione download breve.
+- Pattern: layout pulito e rapido.
+
+## Joplin
+Link: https://github.com/laurent22/joplin
+- README con release/installer in evidenza.
+- Pattern: sezione download + privacy/offline.

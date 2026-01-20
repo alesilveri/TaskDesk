@@ -12,16 +12,22 @@
     "Installed local Node 22 runtime and validated npm ci/dev/build/test/smoke",
     "Project cleanup: removed build artifacts, removed unused assets, removed legacy references",
     "Docs cleanup: removed outdated dev notes (audit/keep-drop/insights) and refreshed inspiration",
+    "Dependency upgrades: Electron 35, Vite 7, Vitest 4 + package refresh",
+    "Automated smoke test (DB temp + export XLSX) running under Electron ABI",
+    "Smart suggestions + Gestore copy grouped by day/cliente",
+    "Backup retention 7/4/6 + safety backup before restore",
+    "CI workflow + Dependabot weekly",
+    "Brand refresh: banner, icon, social preview, screenshot mock",
     "Local Node 22 run: npm ci, test, build, smoke"
   ],
   "remaining": [
-    "Replace screenshot placeholder with a real capture",
-    "Review npm audit vulnerabilities",
-    "Timezone Europe/Rome handling"
+    "Replace generated screenshot with a real capture from the app",
+    "Address tar vulnerability in electron-builder chain",
+    "Update macOS icns icon to match new brand"
   ],
   "next": [
-    "Capture real app screenshot and replace assets/screenshot.png",
-    "Decide npm audit strategy (fix vs ignore) after dependency review",
-    "Implement timezone Europe/Rome handling"
+    "Capture a real in-app screenshot (seeded data) for README",
+    "Investigate electron-builder tar advisory and mitigation",
+    "Regenerate macOS icns icon with new logo"
   ]
 }

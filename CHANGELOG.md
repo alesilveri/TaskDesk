@@ -13,6 +13,11 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Copia Gestore settimanale e controlli per navigare i mesi.
 - Impostazione giorni lavorativi settimanali (target mese/settimana piu' realistici).
 - Preset filtri salvati nella ricerca.
+- Smart suggestions (micro-attivita) quando il gap e' aperto.
+- Copia Gestore raggruppata per giorno/cliente.
+- Smoke test automatico (DB temp + export XLSX).
+- Backup retention 7/4/6 + safety backup prima del restore.
+- CI su push/PR + dependabot weekly.
 
 ### Changed
 - Electron navigation hardening (block external navigation + whitelist openExternal).
@@ -20,6 +25,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Refactor App into views/components and shared utils.
 - README user-first e documentazione tecnica riportata in `docs/`.
 - Node engine strict enforcement for installs.
+- Guardrail minuti: max 240 con warning sopra 180.
+- Upgrade toolchain (Electron 35 + Vite 7 + Vitest 4).
 
 ## [1.0.1] - 2026-01-14
 ### Added
