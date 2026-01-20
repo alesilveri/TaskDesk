@@ -2,10 +2,17 @@ import { eachDayOfInterval, isWeekend, parseISO } from 'date-fns';
 
 export const DEFAULT_TARGET_MINUTES = 8 * 60;
 export const MIN_ACTIVITY_MINUTES = 5;
-export const MAX_ACTIVITY_MINUTES = 12 * 60;
+export const MAX_ACTIVITY_MINUTES = 240;
 export const MINUTE_SUGGESTIONS = [15, 20, 30, 45];
 export const SMART_SLOT_CANDIDATES = [10, 15, 20, 25];
-export const HIGH_DURATION_WARNING_MINUTES = 240;
+const SMART_SUGGESTION_LABELS = [
+  'Follow-up interno',
+  'Aggiornamento documentazione',
+  'Allineamento rapido team',
+  'Pulizia backlog / ticket',
+  'Check stato verbali',
+];
+export const HIGH_DURATION_WARNING_MINUTES = 180;
 
 export function isWorkingDay(date: Date, workingDaysPerWeek = 5) {
   const day = date.getDay();
@@ -45,4 +52,13 @@ export function buildSmartSlots(gapMinutes: number, patterns: number[]) {
     if (slots.length > 8) break;
   }
   return slots;
+}
+
+export function buildSmartSuggestions(gapMinutes: number, patterns: number[]) {
+  if (gapMinutes <= 0) return [];
+  const slots = buildSmartSlots(gapMinutes, patterns).slice(0, 3);
+  return slots.map((minutes, index) => ({
+    minutes,
+    label: SMART_SUGGESTION_LABELS[index % SMART_SUGGESTION_LABELS.length],
+  }));
 }

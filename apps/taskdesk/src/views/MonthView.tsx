@@ -73,7 +73,7 @@ export default function MonthView({
               Esporta XLSX
             </button>
             <button className="rounded-lg border border-ink/10 px-4 py-2 text-xs" onClick={onCopyGestore}>
-              Copia formato Gestore
+              Copia Gestore (raggruppata)
             </button>
           </div>
         </div>
@@ -188,7 +188,7 @@ export default function MonthView({
       </div>
 
       <div className="rounded-xl border border-ink/10 bg-surface">
-        <div className="border-b border-ink/10 px-4 py-3 text-sm font-semibold">Smart grouping (cliente + rif/titolo)</div>
+        <div className="border-b border-ink/10 px-4 py-3 text-sm font-semibold">Raggruppamenti (cliente + rif/titolo)</div>
         <div className="divide-y divide-black/10">
           {(monthlySummary?.groups ?? []).slice(0, 12).map((group) => (
             <div key={`${group.clientName}-${group.label}`} className="flex items-center justify-between px-4 py-3 text-sm">

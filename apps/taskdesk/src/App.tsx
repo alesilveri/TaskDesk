@@ -182,6 +182,10 @@ export default function App() {
   }, [monthGapMinutes, monthWorkingDaysMissing]);
 
   const paletteActions: CommandAction[] = [
+    { id: 'today', label: 'Vai a oggi', shortcut: 'Ctrl+0', onSelect: () => {
+      setSelectedDate(getRomeDateString());
+      setView('day');
+    } },
     { id: 'day', label: 'Vai a Giorno', shortcut: 'Ctrl+1', onSelect: () => setView('day') },
     { id: 'week', label: 'Vai a Settimana', shortcut: 'Ctrl+2', onSelect: () => setView('week') },
     { id: 'month', label: 'Vai a Mese', shortcut: 'Ctrl+3', onSelect: () => setView('month') },
@@ -210,6 +214,11 @@ export default function App() {
       onSelect: () => openQuickAdd(),
     },
     {
+      id: 'backup-now',
+      label: 'Backup ora',
+      onSelect: () => handleBackup(),
+    },
+    {
       id: 'export',
       label: 'Esporta mese (XLSX)',
       shortcut: 'Ctrl+E',
@@ -217,7 +226,7 @@ export default function App() {
     },
     {
       id: 'copy-gestore',
-      label: 'Copia formato Gestore',
+      label: 'Copia Gestore (raggruppata)',
       shortcut: 'Ctrl+Shift+C',
       onSelect: () => handleCopyGestore(),
     },
@@ -303,6 +312,10 @@ export default function App() {
         }
       }
       if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey) {
+        if (event.key === '0') {
+          setSelectedDate(getRomeDateString());
+          setView('day');
+        }
         if (event.key === '1') setView('day');
         if (event.key === '2') setView('week');
         if (event.key === '3') setView('month');
@@ -588,7 +601,7 @@ export default function App() {
               <button
                 key={id}
                 className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition ${
-                  view === id ? 'bg-ink text-white' : 'hover:bg-ink/5'
+                  view === id ? 'bg-teal/15 text-teal' : 'text-ink/70 hover:bg-ink/5'
                 }`}
                 onClick={() => setView(id)}
                 aria-current={view === id ? 'page' : undefined}
@@ -604,17 +617,11 @@ export default function App() {
             <div className="mt-2 text-xs text-ink/50">Target: {formatMinutes(targetMinutes)}</div>
           </div>
 
-          <button
-            className="mt-6 w-full rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white"
-            onClick={openQuickAdd}
-          >
+          <button className="mt-6 w-full rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white" onClick={openQuickAdd}>
             + Nuova attivita
           </button>
-          <button
-            className="mt-3 w-full rounded-lg border border-ink/10 px-4 py-2 text-sm"
-            onClick={() => setPaletteOpen(true)}
-          >
-            Command palette
+          <button className="mt-3 w-full rounded-lg border border-ink/10 px-4 py-2 text-sm" onClick={() => setPaletteOpen(true)}>
+            Comandi rapidi
           </button>
         </aside>
 

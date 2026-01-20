@@ -4,29 +4,29 @@
 
 :root {
   color-scheme: light;
-  --color-ink: 11 15 20;
+  --color-ink: 22 26 34;
   --color-sand: 247 244 239;
   --color-surface: 255 255 255;
-  --color-teal: 43 179 163;
-  --color-amber: 245 158 11;
+  --color-teal: 36 177 159;
+  --color-amber: 243 165 52;
   --color-danger: 227 81 77;
 }
 
 [data-theme='dark'] {
   color-scheme: dark;
-  --color-ink: 241 245 249;
-  --color-sand: 10 12 16;
-  --color-surface: 17 20 26;
-  --color-teal: 52 197 170;
-  --color-amber: 245 158 11;
+  --color-ink: 243 244 246;
+  --color-sand: 13 16 21;
+  --color-surface: 20 24 31;
+  --color-teal: 55 208 191;
+  --color-amber: 245 185 85;
   --color-danger: 240 96 90;
 }
 
 body {
   font-family: 'Source Sans 3', system-ui, -apple-system, Segoe UI, sans-serif;
   background-color: rgb(var(--color-sand));
-  background-image: radial-gradient(1200px circle at 20% -10%, rgb(var(--color-teal) / 0.12), transparent 55%),
-    radial-gradient(900px circle at 120% 10%, rgb(var(--color-amber) / 0.14), transparent 50%);
+  background-image: radial-gradient(1200px circle at 20% -10%, rgb(var(--color-teal) / 0.1), transparent 55%),
+    radial-gradient(900px circle at 120% 10%, rgb(var(--color-amber) / 0.12), transparent 50%);
   background-attachment: fixed;
   color: rgb(var(--color-ink));
 }
@@ -37,7 +37,7 @@ body {
 
 [data-theme='dark'] body {
   background-image: radial-gradient(1200px circle at 20% -10%, rgb(var(--color-teal) / 0.08), transparent 60%),
-    radial-gradient(900px circle at 120% 10%, rgb(var(--color-amber) / 0.08), transparent 55%);
+    radial-gradient(900px circle at 120% 10%, rgb(var(--color-amber) / 0.06), transparent 55%);
 }
 
 button,
@@ -57,5 +57,5 @@ textarea:disabled {
 
 :focus-visible {
   outline: 2px solid rgb(var(--color-teal));
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
